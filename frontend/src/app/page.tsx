@@ -227,23 +227,34 @@ export default function Dashboard() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [orgs, projs, tsks] = await Promise.all([fetchOrganizations(), fetchProjects(), fetchTasks()])
+      let [orgs, projs, tsks] = await Promise.all([fetchOrganizations(), fetchProjects(), fetchTasks()])
+
+      // 初回ログイン時（組織がない場合）はファンベストを自動作成
+      if (orgs.length === 0) {
+        const res = await fetch('/api/organizations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'ファンベスト',
+            initial: 'F',
+            color: 'bg-blue-500'
+          })
+        })
+        if (res.ok) {
+          const newOrg = await res.json()
+          orgs = [newOrg]
+        }
+      }
+
       setOrganizations(orgs)
       setProjects(projs)
       setTasks(tsks)
       if (orgs.length > 0 && !selectedOrgId) setSelectedOrgId(orgs[0].id)
       if (orgs.length > 0) setNewTaskOrgId(orgs[0].id)
       if (orgs.length > 0) setNewProjectOrgId(orgs[0].id)
-      // モック目標
-      setGoals([
-        { id: '1', title: '新規顧客獲得', progress: 65, targetValue: 10, currentValue: 6.5, unit: '件', quarter: `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}` },
-        { id: '2', title: '売上達成', progress: 45, targetValue: 1000, currentValue: 450, unit: '万円', quarter: `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}` }
-      ])
-      // モック通知
-      setNotifications([
-        { id: '1', type: 'due', message: 'プレゼン資料作成の期限が明日です', createdAt: new Date().toISOString(), read: false, taskId: '1' },
-        { id: '2', type: 'mention', message: '田中さんがコメントしました', createdAt: new Date().toISOString(), read: false, taskId: '2' }
-      ])
+      // 目標と通知は空で初期化（モックデータなし）
+      setGoals([])
+      setNotifications([])
     } catch (e) { console.error(e) }
     setLoading(false)
   }
