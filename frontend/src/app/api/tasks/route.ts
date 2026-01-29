@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, tasks } from '@/lib/db';
-import { eq, and, isNull, desc } from 'drizzle-orm';
+import { eq, and, isNull, desc, or } from 'drizzle-orm';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 
-// GET: タスク一覧取得（シンプル版 - N+1問題を回避）
+// GET: タスク一覧取得（ユーザー別）
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userEmail = session.user.email;
   const { searchParams } = new URL(request.url);
   const orgId = searchParams.get('organizationId');
   const projectId = searchParams.get('projectId');
@@ -12,6 +20,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const conditions = [];
+
+    // ユーザーのメールアドレスでフィルター（createdByEmailフィールドを使用）
+    conditions.push(eq(tasks.createdByEmail, userEmail));
 
     if (parentOnly) {
       conditions.push(isNull(tasks.parentTaskId));
@@ -40,13 +51,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: タスク作成
+// POST: タスク作成（ユーザーのメールを保存）
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const data = await request.json();
     const result = await db.insert(tasks).values({
       ...data,
       dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+      createdByEmail: session.user.email, // ユーザーのメールを保存
     }).returning();
     return NextResponse.json(result[0], { status: 201 });
   } catch (error) {

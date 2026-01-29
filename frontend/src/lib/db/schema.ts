@@ -26,6 +26,7 @@ export const organizations = pgTable('organizations', {
   initial: varchar('initial', { length: 2 }).notNull(),
   color: varchar('color', { length: 20 }).default('blue').notNull(),
   ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'cascade' }),
+  ownerEmail: varchar('owner_email', { length: 255 }), // ユーザー識別用
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
@@ -49,6 +50,7 @@ export const projects = pgTable('projects', {
   description: text('description'),
   color: varchar('color', { length: 20 }),
   status: varchar('status', { length: 20 }).default('active'), // active, archived, completed
+  ownerEmail: varchar('owner_email', { length: 255 }), // ユーザー識別用
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
@@ -71,6 +73,7 @@ export const tasks = pgTable('tasks', {
 
   assignedTo: uuid('assigned_to').references(() => users.id, { onDelete: 'set null' }),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdByEmail: varchar('created_by_email', { length: 255 }), // ユーザー識別用
 
   dueDate: timestamp('due_date', { withTimezone: true }),
   estimatedMinutes: integer('estimated_minutes'), // AI予測時間
