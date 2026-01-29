@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EXECUTY - AI Executive Task Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50: '#eff6ff', 100: '#dbeafe', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb' },
+            accent: { 400: '#c084fc', 500: '#a855f7' },
+            slack: '#4A154B',
+            gchat: '#00AC47',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    .card { background: white; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .org-btn.active { background: var(--org-bg); color: var(--org-text); border-color: var(--org-border); }
+    .task-item { transition: all 0.2s ease; }
+    .task-item.hidden { display: none; }
+  </style>
+  <script>
+    // データ構造
+    const appData = {
+      organizations: [
+        { id: 'funvest', name: 'ファンベスト', initial: 'F', color: 'blue', taskCount: 8 },
+        { id: 'pathgate', name: 'パスゲート', initial: 'P', color: 'purple', taskCount: 5 },
+        { id: 'evego', name: 'Evego', initial: 'E', color: 'green', taskCount: 3 },
+        { id: 'personal', name: '個人', initial: '個', color: 'orange', taskCount: 2 }
+      ],
+      projects: [
+        { id: 'fund-ops', name: 'ファンド運営', orgId: 'funvest', color: 'blue' },
+        { id: 'investment-advisor', name: '投資顧問', orgId: 'funvest', color: 'blue' },
+        { id: 'aeg-system', name: 'AEGシステム', orgId: 'pathgate', color: 'purple' },
+        { id: 'dev-project', name: '開発プロジェクト', orgId: 'pathgate', color: 'purple' },
+        { id: 'new-business', name: '新規事業', orgId: 'evego', color: 'green' },
+        { id: 'personal-task', name: '個人タスク', orgId: 'personal', color: 'orange' }
+      ],
+      currentOrg: 'all'
+    };
+
+    function selectOrganization(orgId) {
+      appData.currentOrg = orgId;
+      updateUI();
+    }
+
+    function updateUI() {
+      // 組織ボタンの状態更新
+      const colorMap = {
+        'all': { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200', badge: 'bg-gray-200 text-gray-600' },
+        'funvest': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100', badge: 'bg-blue-100 text-blue-600' },
+        'pathgate': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-100', badge: 'bg-purple-100 text-purple-600' },
+        'evego': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-100', badge: 'bg-green-100 text-green-600' },
+        'personal': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-100', badge: 'bg-orange-100 text-orange-600' }
+      };
+
+      document.querySelectorAll('.org-btn').forEach(btn => {
+        const id = btn.dataset.orgId;
+        const colors = colorMap[id];
+        const badge = btn.querySelector('span:last-child');
+
+        if (id === appData.currentOrg) {
+          btn.className = `org-btn w-full flex items-center gap-3 px-3 py-2 rounded-lg ${colors.bg} ${colors.text} border ${colors.border}`;
+          if (badge) badge.className = `text-xs ${colors.badge} px-1.5 py-0.5 rounded`;
+        } else {
+          btn.className = 'org-btn w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700';
+          if (badge) badge.className = 'text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded';
+        }
+      });
+
+      // プロジェクトのフィルタリング
+      document.querySelectorAll('.project-item').forEach(item => {
+        if (appData.currentOrg === 'all' || item.dataset.orgId === appData.currentOrg) {
+          item.classList.remove('hidden');
+        } else {
+          item.classList.add('hidden');
+        }
+      });
+
+      // タスクのフィルタリング
+      document.querySelectorAll('.task-item').forEach(item => {
+        if (appData.currentOrg === 'all' || item.dataset.orgId === appData.currentOrg) {
+          item.classList.remove('hidden');
+        } else {
+          item.classList.add('hidden');
+        }
+      });
+
+      // ヘッダーの組織名更新
+      const headerOrgName = document.getElementById('header-org-name');
+      const headerColorMap = {
+        'all': 'text-gray-600',
+        'funvest': 'text-blue-600',
+        'pathgate': 'text-purple-600',
+        'evego': 'text-green-600',
+        'personal': 'text-orange-600'
+      };
+
+      if (appData.currentOrg === 'all') {
+        headerOrgName.textContent = 'すべての組織';
+      } else {
+        const org = appData.organizations.find(o => o.id === appData.currentOrg);
+        headerOrgName.textContent = org.name;
+      }
+      headerOrgName.className = `text-lg font-medium ${headerColorMap[appData.currentOrg]}`;
+
+      // タスク数の更新
+      updateTaskCounts();
+    }
+
+    function updateTaskCounts() {
+      const visible = document.querySelectorAll('.task-item:not(.hidden)').length;
+      document.getElementById('task-count').textContent = visible;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateUI();
+    });
+  </script>
+</head>
+<body class="antialiased bg-gray-50 text-gray-900 min-h-screen">
+
+  <!-- サイドバー -->
+  <aside class="fixed left-0 top-0 h-full w-72 bg-white border-r border-gray-200 z-40 overflow-y-auto">
+    <div class="flex flex-col h-full">
+      <!-- ロゴ -->
+      <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">EXECUTY</h1>
+          <p class="text-xs text-gray-500">Executive Task Manager</p>
+        </div>
+      </div>
+
+      <!-- 組織セクション -->
+      <div class="px-4 py-4 border-b border-gray-100">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">組織</span>
+          <button class="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-blue-500" title="組織を追加">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          </button>
+        </div>
+        <!-- 組織リスト -->
+        <div class="space-y-1" id="org-list">
+          <!-- すべて表示ボタン -->
+          <button onclick="selectOrganization('all')" data-org-id="all" class="org-btn w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-100 text-gray-700 border border-gray-200">
+            <div class="w-6 h-6 rounded bg-gray-500 flex items-center justify-center">
+              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+            </div>
+            <span class="text-sm font-medium flex-1 text-left">すべて</span>
+            <span class="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">18</span>
+          </button>
+          <button onclick="selectOrganization('funvest')" data-org-id="funvest" class="org-btn w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+            <div class="w-6 h-6 rounded bg-blue-500 flex items-center justify-center">
+              <span class="text-xs font-bold text-white">F</span>
+            </div>
+            <span class="text-sm font-medium flex-1 text-left">ファンベスト</span>
+            <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded" id="count-funvest">8</span>
+          </button>
+          <button onclick="selectOrganization('pathgate')" data-org-id="pathgate" class="org-btn w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+            <div class="w-6 h-6 rounded bg-purple-500 flex items-center justify-center">
+              <span class="text-xs font-bold text-white">P</span>
+            </div>
+            <span class="text-sm font-medium flex-1 text-left">パスゲート</span>
+            <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded" id="count-pathgate">5</span>
+          </button>
+          <button onclick="selectOrganization('evego')" data-org-id="evego" class="org-btn w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+            <div class="w-6 h-6 rounded bg-green-500 flex items-center justify-center">
+              <span class="text-xs font-bold text-white">E</span>
+            </div>
+            <span class="text-sm font-medium flex-1 text-left">Evego</span>
+            <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded" id="count-evego">3</span>
+          </button>
+          <button onclick="selectOrganization('personal')" data-org-id="personal" class="org-btn w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+            <div class="w-6 h-6 rounded bg-orange-500 flex items-center justify-center">
+              <span class="text-xs font-bold text-white">個</span>
+            </div>
+            <span class="text-sm font-medium flex-1 text-left">個人</span>
+            <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded" id="count-personal">2</span>
+          </button>
+          <!-- 組織追加ボタン -->
+          <button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/50 transition-colors">
+            <div class="w-6 h-6 rounded border-2 border-dashed border-current flex items-center justify-center">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            </div>
+            <span class="text-sm">組織を追加</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- プロジェクトセクション -->
+      <div class="px-4 py-4 border-b border-gray-100">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">プロジェクト</span>
+          <button class="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-blue-500" title="プロジェクトを追加">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          </button>
+        </div>
+        <div class="space-y-1" id="project-list">
+          <button data-org-id="funvest" class="project-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+            <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+            <span class="text-sm flex-1 text-left">ファンド運営</span>
+            <span class="text-xs text-gray-400">3</span>
+          </button>
+          <button data-org-id="funvest" class="project-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+            <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+            <span class="text-sm flex-1 text-left">投資顧問</span>
+            <span class="text-xs text-gray-400">5</span>
+          </button>
+          <button data-org-id="pathgate" class="project-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+            <div class="w-2 h-2 rounded-full bg-purple-500"></div>
+            <span class="text-sm flex-1 text-left">AEGシステム</span>
+            <span class="text-xs text-gray-400">3</span>
+          </button>
+          <button data-org-id="pathgate" class="project-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+            <div class="w-2 h-2 rounded-full bg-purple-500"></div>
+            <span class="text-sm flex-1 text-left">開発プロジェクト</span>
+            <span class="text-xs text-gray-400">2</span>
+          </button>
+          <button data-org-id="evego" class="project-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+            <div class="w-2 h-2 rounded-full bg-green-500"></div>
+            <span class="text-sm flex-1 text-left">新規事業</span>
+            <span class="text-xs text-gray-400">3</span>
+          </button>
+          <button data-org-id="personal" class="project-item w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+            <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+            <span class="text-sm flex-1 text-left">個人タスク</span>
+            <span class="text-xs text-gray-400">2</span>
+          </button>
+          <!-- プロジェクト追加ボタン -->
+          <button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/50 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span class="text-sm">プロジェクトを追加</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- メニュー -->
+      <nav class="flex-1 px-4 py-4">
+        <ul class="space-y-1">
+          <li><a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg><span class="text-sm font-medium">ダッシュボード</span></a></li>
+          <li><a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100"><div class="flex items-center gap-3"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg><span class="text-sm font-medium">タスク</span></div><span class="px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full text-xs font-medium">24</span></a></li>
+          <li><a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg><span class="text-sm font-medium">四半期目標</span></a></li>
+          <li><a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-sm font-medium">カレンダー</span></a></li>
+          <li><a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg><span class="text-sm font-medium">分析</span></a></li>
+        </ul>
+      </nav>
+
+      <!-- 下部メニュー -->
+      <div class="px-4 py-4 border-t border-gray-200">
+        <ul class="space-y-1">
+          <li><a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100"><svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg><span class="text-sm font-medium">AI アシスタント</span></a></li>
+          <li><a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg><span class="text-sm font-medium">設定</span></a></li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="ml-72">
+    <!-- ヘッダー -->
+    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-200">
+      <div class="flex items-center justify-between px-6 py-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-semibold text-gray-900">おはようございます、渡邊さん</h2>
+            <span class="text-gray-400">|</span>
+            <span id="header-org-name" class="text-lg font-medium text-blue-600">すべての組織</span>
+          </div>
+          <div class="flex items-center gap-2 text-sm text-gray-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            <span>2026年1月25日 日曜日</span>
+            <span class="mx-1">·</span>
+            <span>タスク <span id="task-count" class="font-medium text-blue-600">18</span>件</span>
+          </div>
+        </div>
+
+        <!-- 検索 -->
+        <div class="flex-1 max-w-md mx-8">
+          <div class="relative">
+            <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input type="text" placeholder="検索..." class="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-medium hover:opacity-90 shadow-md">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+            AIに相談
+          </button>
+          <button class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl text-sm font-medium hover:bg-blue-600 shadow-md">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            新規タスク
+          </button>
+          <button class="relative p-2 hover:bg-gray-100 rounded-xl">
+            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+            <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center font-medium">7</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ダッシュボード -->
+    <main class="p-6">
+      <!-- 統計カード -->
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div class="card hover:shadow-lg transition-shadow cursor-pointer">
+          <div class="flex items-start justify-between mb-3">
+            <div class="p-2.5 rounded-xl bg-blue-50"><svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg></div>
+            <div class="flex items-center gap-1 text-xs font-medium text-green-600">+3</div>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">12</p>
+          <p class="text-xs text-gray-500">本日のタスク</p>
+        </div>
+        <div class="card hover:shadow-lg transition-shadow cursor-pointer">
+          <div class="flex items-start justify-between mb-3">
+            <div class="p-2.5 rounded-xl bg-green-50"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+            <div class="flex items-center gap-1 text-xs font-medium text-green-600">+2</div>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">5</p>
+          <p class="text-xs text-gray-500">完了</p>
+        </div>
+        <div class="card hover:shadow-lg transition-shadow cursor-pointer">
+          <div class="flex items-start justify-between mb-3">
+            <div class="p-2.5 rounded-xl bg-yellow-50"><svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">4</p>
+          <p class="text-xs text-gray-500">進行中</p>
+        </div>
+        <div class="card hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-red-200">
+          <div class="flex items-start justify-between mb-3">
+            <div class="p-2.5 rounded-xl bg-red-50"><svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
+            <div class="flex items-center gap-1 text-xs font-medium text-red-600">+1</div>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">2</p>
+          <p class="text-xs text-gray-500">期限超過</p>
+        </div>
+        <div class="card hover:shadow-lg transition-shadow cursor-pointer">
+          <div class="flex items-start justify-between mb-3">
+            <div class="p-2.5 rounded-xl bg-purple-50"><svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></div>
+            <div class="flex items-center gap-1 text-xs font-medium text-green-600">+5%</div>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">68%</p>
+          <p class="text-xs text-gray-500">Q1目標</p>
+        </div>
+        <div class="card hover:shadow-lg transition-shadow cursor-pointer">
+          <div class="flex items-start justify-between mb-3">
+            <div class="p-2.5 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50"><svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
+            <div class="flex items-center gap-1 text-xs font-medium text-green-600">+12</div>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">85</p>
+          <p class="text-xs text-gray-500">生産性</p>
+        </div>
+      </div>
+
+      <!-- Slack/Google Chat 通知セクション -->
+      <div class="mt-6">
+        <div class="card border-l-4 border-l-purple-500">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="flex -space-x-2">
+                <div class="w-8 h-8 rounded-lg bg-[#4A154B] flex items-center justify-center border-2 border-white">
+                  <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
+                </div>
+                <div class="w-8 h-8 rounded-lg bg-[#00AC47] flex items-center justify-center border-2 border-white">
+                  <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.372 0 0 5.373 0 12s5.372 12 12 12 12-5.373 12-12S18.628 0 12 0zm5.568 8.16c-.169 1.858-.896 6.376-1.266 8.462-.156.881-.466 1.177-.765 1.205-.65.063-1.143-.43-1.773-.842-.984-.646-1.54-1.047-2.497-1.678-1.104-.728-.388-1.13.241-1.784.165-.172 3.026-2.773 3.082-3.01.007-.03.014-.139-.052-.197-.066-.057-.163-.038-.233-.022-.1.022-1.69 1.074-4.772 3.153-.451.31-.86.461-1.227.453-.404-.009-1.18-.228-1.757-.416-.707-.23-1.27-.352-1.221-.744.026-.204.308-.413.85-.627 3.325-1.448 5.543-2.403 6.652-2.865 3.165-1.318 3.822-1.548 4.248-1.555.095-.002.306.022.443.133.116.093.147.218.163.306.015.088.035.29.02.448z"/></svg>
+                </div>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">メッセージ通知</h3>
+                <p class="text-xs text-gray-500">Slack・Google Chatからの連絡</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 bg-red-100 text-red-600 rounded-full text-xs font-bold">4件の対応待ち</span>
+              <button class="text-sm text-blue-600 hover:text-blue-700 font-medium">すべて見る →</button>
+            </div>
+          </div>
+
+          <!-- メッセージリスト -->
+          <div class="space-y-3">
+            <!-- Slackメッセージ1（メンション） -->
+            <div class="flex items-start gap-3 p-3 bg-purple-50/50 rounded-xl border border-purple-100 hover:bg-purple-50 cursor-pointer transition-colors">
+              <div class="w-8 h-8 rounded-lg bg-[#4A154B] flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs font-semibold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">@メンション</span>
+                  <span class="text-xs text-gray-500">#投資案件-レビュー</span>
+                  <span class="text-xs text-gray-400">10分前</span>
+                </div>
+                <p class="text-sm text-gray-700"><span class="font-medium">田中さん:</span> @渡邊さん Q1の投資案件レビュー資料、14時のMTGまでに確認お願いできますか？</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 text-xs font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700">タスク化</button>
+                <button class="px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-100 rounded-lg hover:bg-purple-200">返信</button>
+              </div>
+            </div>
+
+            <!-- Google Chatメッセージ（DM） -->
+            <div class="flex items-start gap-3 p-3 bg-green-50/50 rounded-xl border border-green-100 hover:bg-green-50 cursor-pointer transition-colors">
+              <div class="w-8 h-8 rounded-lg bg-[#00AC47] flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.372 0 0 5.373 0 12s5.372 12 12 12 12-5.373 12-12S18.628 0 12 0z"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">DM</span>
+                  <span class="text-xs text-gray-500">佐藤部長</span>
+                  <span class="text-xs text-gray-400">25分前</span>
+                </div>
+                <p class="text-sm text-gray-700">来週の経営会議の資料、今日中にドラフトいただけると助かります。</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">タスク化</button>
+                <button class="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-100 rounded-lg hover:bg-green-200">返信</button>
+              </div>
+            </div>
+
+            <!-- Slackメッセージ2 -->
+            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 cursor-pointer transition-colors">
+              <div class="w-8 h-8 rounded-lg bg-[#4A154B] flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52z"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs font-semibold text-gray-600 bg-gray-200 px-1.5 py-0.5 rounded">チャンネル</span>
+                  <span class="text-xs text-gray-500">#general-パスゲート</span>
+                  <span class="text-xs text-gray-400">1時間前</span>
+                </div>
+                <p class="text-sm text-gray-700"><span class="font-medium">開発チーム:</span> 本日15:30からの進捗MTG、アジェンダを共有しました。</p>
+              </div>
+              <div class="flex items-center gap-1">
+                <button class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </button>
+                <button class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Google Chatメッセージ2 -->
+            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 cursor-pointer transition-colors">
+              <div class="w-8 h-8 rounded-lg bg-[#00AC47] flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.372 0 0 5.373 0 12s5.372 12 12 12 12-5.373 12-12S18.628 0 12 0z"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs font-semibold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">スペース</span>
+                  <span class="text-xs text-gray-500">Evego新規事業</span>
+                  <span class="text-xs text-gray-400">2時間前</span>
+                </div>
+                <p class="text-sm text-gray-700"><span class="font-medium">山田さん:</span> 新規事業計画のドラフト、レビューコメントを追加しました。</p>
+              </div>
+              <div class="flex items-center gap-1">
+                <button class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- メイングリッド -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <!-- 左: タスクリスト -->
+        <div class="lg:col-span-2 space-y-6">
+          <div class="card">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-lg font-semibold text-gray-900">タスク</h3>
+              <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-600 border border-blue-100">すべて</button>
+                <button class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100">今日</button>
+                <button class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100">期限超過</button>
+              </div>
+            </div>
+
+            <!-- タスクリスト -->
+            <div class="space-y-4" id="task-list">
+              <!-- 大タスク1: ファンベスト -->
+              <div class="task-item border border-gray-200 rounded-xl overflow-hidden" data-org-id="funvest">
+                <div class="p-4 bg-blue-50 border-l-4 border-blue-500">
+                  <div class="flex items-start gap-4">
+                    <button class="mt-1 text-gray-400 hover:text-blue-500">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg>
+                    </button>
+                    <div class="flex-1">
+                      <div class="flex items-start justify-between">
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <h4 class="font-semibold text-gray-900">Q1投資案件レビュー資料作成</h4>
+                            <span class="px-2 py-0.5 rounded text-xs font-medium text-red-600 bg-red-100">緊急</span>
+                          </div>
+                          <div class="flex items-center gap-3 mt-2 ml-6">
+                            <div class="flex items-center gap-1.5">
+                              <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                              <span class="text-xs text-gray-500">ファンベスト</span>
+                            </div>
+                            <span class="text-xs text-gray-500">ファンド運営</span>
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                          <button class="flex items-center gap-1.5 px-2 py-1 bg-blue-100 text-blue-600 rounded-lg text-xs font-medium">32:15</button>
+                          <div class="flex items-center gap-1.5 text-xs text-amber-600 font-medium">今日 14:00</div>
+                        </div>
+                      </div>
+                      <div class="mt-3 ml-6">
+                        <div class="flex items-center justify-between text-xs mb-1.5">
+                          <span class="text-gray-500">サブタスク 3/5</span>
+                          <span class="text-gray-600 font-medium">65%</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div class="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full" style="width: 65%"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- サブタスク -->
+                <div class="bg-white divide-y divide-gray-100">
+                  <div class="p-3 pl-12 flex items-center gap-3 bg-green-50/50">
+                    <button class="text-green-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></button>
+                    <span class="text-sm text-gray-400 line-through flex-1">過去データ収集・整理</span>
+                    <span class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">完了</span>
+                  </div>
+                  <div class="p-3 pl-12 flex items-center gap-3 bg-green-50/50">
+                    <button class="text-green-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></button>
+                    <span class="text-sm text-gray-400 line-through flex-1">市場分析レポート作成</span>
+                    <span class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">完了</span>
+                  </div>
+                  <div class="p-3 pl-12 flex items-center gap-3 bg-green-50/50">
+                    <button class="text-green-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></button>
+                    <span class="text-sm text-gray-400 line-through flex-1">投資先企業評価シート</span>
+                    <span class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">完了</span>
+                  </div>
+                  <div class="p-3 pl-12 flex items-center gap-3 bg-blue-50/50">
+                    <button class="text-blue-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg></button>
+                    <span class="text-sm text-gray-700 flex-1 font-medium">リスク分析・提言まとめ</span>
+                    <span class="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded">進行中</span>
+                  </div>
+                  <div class="p-3 pl-12 flex items-center gap-3">
+                    <button class="text-gray-300"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg></button>
+                    <span class="text-sm text-gray-600 flex-1">プレゼン資料最終チェック</span>
+                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">未着手</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 大タスク2: パスゲート -->
+              <div class="task-item border border-gray-200 rounded-xl overflow-hidden" data-org-id="pathgate">
+                <div class="p-4 bg-purple-50 border-l-4 border-purple-500">
+                  <div class="flex items-start gap-4">
+                    <button class="mt-1 text-gray-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg></button>
+                    <div class="flex-1">
+                      <div class="flex items-start justify-between">
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-400 -rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <h4 class="font-semibold text-gray-900">システム開発進捗MTG準備</h4>
+                            <span class="px-2 py-0.5 rounded text-xs font-medium text-orange-600 bg-orange-100">高</span>
+                          </div>
+                          <div class="flex items-center gap-3 mt-2 ml-6">
+                            <div class="flex items-center gap-1.5">
+                              <div class="w-2 h-2 rounded-full bg-purple-500"></div>
+                              <span class="text-xs text-gray-500">パスゲート</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="text-xs text-gray-500">明日 10:00</div>
+                      </div>
+                      <div class="mt-3 ml-6">
+                        <div class="flex items-center justify-between text-xs mb-1.5">
+                          <span class="text-gray-500">サブタスク 0/3</span>
+                          <span class="text-gray-600 font-medium">0%</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div class="h-full bg-purple-500 rounded-full" style="width: 0%"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 大タスク3: Evego -->
+              <div class="task-item border border-gray-200 rounded-xl overflow-hidden" data-org-id="evego">
+                <div class="p-4 bg-green-50 border-l-4 border-green-500">
+                  <div class="flex items-start gap-4">
+                    <button class="mt-1 text-gray-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg></button>
+                    <div class="flex-1">
+                      <div class="flex items-start justify-between">
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-400 -rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <h4 class="font-semibold text-gray-900">新規事業計画書ドラフト</h4>
+                          </div>
+                          <div class="flex items-center gap-3 mt-2 ml-6">
+                            <div class="flex items-center gap-1.5">
+                              <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                              <span class="text-xs text-gray-500">Evego</span>
+                            </div>
+                            <span class="text-xs text-gray-500">新規事業</span>
+                          </div>
+                        </div>
+                        <div class="text-xs text-gray-500">1/28</div>
+                      </div>
+                      <div class="mt-3 ml-6">
+                        <div class="flex items-center justify-between text-xs mb-1.5">
+                          <span class="text-gray-500">サブタスク 1/4</span>
+                          <span class="text-gray-600 font-medium">25%</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div class="h-full bg-green-500 rounded-full" style="width: 25%"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 大タスク4: 個人 -->
+              <div class="task-item border border-gray-200 rounded-xl overflow-hidden" data-org-id="personal">
+                <div class="p-4 bg-orange-50 border-l-4 border-orange-500">
+                  <div class="flex items-start gap-4">
+                    <button class="mt-1 text-gray-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg></button>
+                    <div class="flex-1">
+                      <div class="flex items-start justify-between">
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-400 -rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <h4 class="font-semibold text-gray-900">確定申告準備</h4>
+                          </div>
+                          <div class="flex items-center gap-3 mt-2 ml-6">
+                            <div class="flex items-center gap-1.5">
+                              <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                              <span class="text-xs text-gray-500">個人</span>
+                            </div>
+                            <span class="text-xs text-gray-500">個人タスク</span>
+                          </div>
+                        </div>
+                        <div class="text-xs text-gray-500">2/15</div>
+                      </div>
+                      <div class="mt-3 ml-6">
+                        <div class="flex items-center justify-between text-xs mb-1.5">
+                          <span class="text-gray-500">サブタスク 0/5</span>
+                          <span class="text-gray-600 font-medium">0%</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div class="h-full bg-orange-500 rounded-full" style="width: 0%"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 大タスク5: ファンベスト（追加） -->
+              <div class="task-item border border-gray-200 rounded-xl overflow-hidden" data-org-id="funvest">
+                <div class="p-4 bg-blue-50 border-l-4 border-blue-500">
+                  <div class="flex items-start gap-4">
+                    <button class="mt-1 text-gray-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg></button>
+                    <div class="flex-1">
+                      <div class="flex items-start justify-between">
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-400 -rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <h4 class="font-semibold text-gray-900">投資先モニタリングレポート</h4>
+                          </div>
+                          <div class="flex items-center gap-3 mt-2 ml-6">
+                            <div class="flex items-center gap-1.5">
+                              <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                              <span class="text-xs text-gray-500">ファンベスト</span>
+                            </div>
+                            <span class="text-xs text-gray-500">投資顧問</span>
+                          </div>
+                        </div>
+                        <div class="text-xs text-gray-500">1/31</div>
+                      </div>
+                      <div class="mt-3 ml-6">
+                        <div class="flex items-center justify-between text-xs mb-1.5">
+                          <span class="text-gray-500">サブタスク 2/6</span>
+                          <span class="text-gray-600 font-medium">33%</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div class="h-full bg-blue-500 rounded-full" style="width: 33%"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button class="w-full mt-4 py-3 text-sm text-gray-500 hover:text-blue-600 flex items-center justify-center gap-2">
+              すべてのタスクを見る →
+            </button>
+          </div>
+
+          <!-- タスク詳細パネル（展開表示） -->
+          <div class="card border-2 border-blue-200 bg-blue-50/30">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                <h3 class="text-lg font-semibold text-gray-900">Q1投資案件レビュー資料作成</h3>
+                <span class="px-2 py-0.5 rounded text-xs font-medium text-red-600 bg-red-100">緊急</span>
+              </div>
+              <button class="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+
+            <!-- タブナビゲーション -->
+            <div class="flex items-center gap-1 border-b border-gray-200 mb-4">
+              <button class="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-500">サブタスク</button>
+              <button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">打ち合わせ</button>
+              <button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">ファイル</button>
+              <button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">議事録</button>
+              <button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">アクティビティ</button>
+            </div>
+
+            <!-- サブタスクセクション（編集可能） -->
+            <div class="space-y-3 mb-6">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-gray-700">サブタスク（3/5完了）</span>
+                <button class="flex items-center gap-1 text-xs text-blue-600 font-medium hover:text-blue-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                  サブタスク追加
+                </button>
+              </div>
+
+              <!-- 編集可能なサブタスク -->
+              <div class="space-y-2">
+                <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 group hover:border-blue-300">
+                  <button class="text-green-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></button>
+                  <input type="text" value="過去データ収集・整理" class="flex-1 text-sm text-gray-400 line-through bg-transparent border-none focus:outline-none focus:ring-0" readonly>
+                  <span class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">完了</span>
+                  <button class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 group hover:border-blue-300">
+                  <button class="text-green-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></button>
+                  <input type="text" value="市場分析レポート作成" class="flex-1 text-sm text-gray-400 line-through bg-transparent border-none focus:outline-none focus:ring-0" readonly>
+                  <span class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">完了</span>
+                  <button class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 group hover:border-blue-300">
+                  <button class="text-green-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></button>
+                  <input type="text" value="投資先企業評価シート" class="flex-1 text-sm text-gray-400 line-through bg-transparent border-none focus:outline-none focus:ring-0" readonly>
+                  <span class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">完了</span>
+                  <button class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border-2 border-blue-300 group">
+                  <button class="text-blue-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg></button>
+                  <input type="text" value="リスク分析・提言まとめ" class="flex-1 text-sm text-gray-800 font-medium bg-transparent border-none focus:outline-none focus:ring-0">
+                  <span class="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded">進行中</span>
+                  <button class="text-gray-400 hover:text-gray-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 group hover:border-blue-300">
+                  <button class="text-gray-300"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg></button>
+                  <input type="text" value="プレゼン資料最終チェック" class="flex-1 text-sm text-gray-600 bg-transparent border-none focus:outline-none focus:ring-0">
+                  <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">未着手</span>
+                  <button class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 打ち合わせセクション -->
+            <div class="border-t border-gray-200 pt-4 mb-4">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                  <span class="text-sm font-medium text-gray-700">関連する打ち合わせ（2件）</span>
+                </div>
+                <button class="flex items-center gap-1 text-xs text-blue-600 font-medium hover:text-blue-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                  打ち合わせを追加
+                </button>
+              </div>
+
+              <div class="space-y-2">
+                <!-- 打ち合わせ1 -->
+                <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div class="p-2 rounded-lg bg-green-100">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-800">投資案件事前すり合わせ</p>
+                    <p class="text-xs text-gray-500">1/20 10:00 - 11:00 · 会議室A · 田中、佐藤</p>
+                  </div>
+                  <span class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">完了</span>
+                  <button class="text-gray-400 hover:text-blue-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                  </button>
+                </div>
+
+                <!-- 打ち合わせ2（本日） -->
+                <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border-2 border-blue-300">
+                  <div class="p-2 rounded-lg bg-blue-100">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-800">Q1投資委員会（レビュー発表）</p>
+                    <p class="text-xs text-gray-500">今日 14:00 - 15:00 · Zoom · 投資チーム全員</p>
+                  </div>
+                  <span class="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded animate-pulse">本日</span>
+                  <button class="text-gray-400 hover:text-blue-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Google Drive 共有リンクセクション -->
+            <div class="border-t border-gray-200 pt-4 mb-4">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                    <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972a6.033 6.033 0 110-12.064c1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2C7.021 2 2.543 6.477 2.543 12s4.478 10 10.002 10c8.396 0 10.249-7.85 9.426-11.748l-9.426-.013z" fill="#4285F4"/>
+                  </svg>
+                  <span class="text-sm font-medium text-gray-700">Google Drive 共有（3件）</span>
+                </div>
+                <button class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white font-medium bg-blue-500 rounded-lg hover:bg-blue-600">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                  リンクを追加
+                </button>
+              </div>
+
+              <div class="space-y-2">
+                <!-- 共有リンク1 -->
+                <a href="#" class="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition-colors group">
+                  <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 via-green-500 to-blue-500 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.56-11.5-3.43-6zM15.29 3.5l-3.43 6 6.56 11.5h6.86l-6.56-11.5-3.43-6zM8.57 21l6.57-11.5L8.57 3.5 2 15l6.57 6z"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-800 truncate">Q1投資案件レビュー資料</p>
+                    <p class="text-xs text-gray-500">フォルダ · 12ファイル · 田中と共有中</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">編集可</span>
+                    <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                  </div>
+                </a>
+
+                <!-- 共有リンク2 -->
+                <a href="#" class="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition-colors group">
+                  <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                    <span class="text-white text-xs font-bold">XLS</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-800 truncate">Q1投資実績.xlsx</p>
+                    <p class="text-xs text-gray-500">スプレッドシート · 1/23更新</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded">閲覧のみ</span>
+                    <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                  </div>
+                </a>
+
+                <!-- 共有リンク3 -->
+                <a href="#" class="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition-colors group">
+                  <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <span class="text-white text-xs font-bold">DOC</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-800 truncate">リスク評価レポート（ドラフト）</p>
+                    <p class="text-xs text-gray-500">ドキュメント · 編集中 · 佐藤がコメント中</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">編集可</span>
+                    <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                  </div>
+                </a>
+              </div>
+            </div>
+
+            <!-- 議事録セクション -->
+            <div class="border-t border-gray-200 pt-4">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                  <span class="text-sm font-medium text-gray-700">議事録・メモ（2件）</span>
+                </div>
+                <button class="flex items-center gap-1 text-xs text-purple-600 font-medium hover:text-purple-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                  議事録を追加
+                </button>
+              </div>
+
+              <div class="space-y-2">
+                <!-- 議事録1 -->
+                <div class="p-3 bg-purple-50 rounded-lg border border-purple-200 hover:border-purple-400 cursor-pointer">
+                  <div class="flex items-start justify-between mb-2">
+                    <div>
+                      <p class="text-sm font-medium text-gray-800">投資案件事前すり合わせ 議事録</p>
+                      <p class="text-xs text-gray-500">1/20 10:00 · 作成者: 田中</p>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <button class="p-1 text-gray-400 hover:text-purple-600 rounded"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                    </div>
+                  </div>
+                  <div class="text-xs text-gray-600 bg-white p-2 rounded border border-purple-100">
+                    <p class="font-medium mb-1">【決定事項】</p>
+                    <p>• Q1投資実績は予算比105%で着地見込み</p>
+                    <p>• A社案件は追加デューデリジェンス必要</p>
+                    <p>• リスク評価レポートは1/24までに完成</p>
+                  </div>
+                  <div class="flex items-center gap-2 mt-2">
+                    <span class="text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded">決定事項3件</span>
+                    <span class="text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded">TODO2件</span>
+                  </div>
+                </div>
+
+                <!-- 議事録2（下書き） -->
+                <div class="p-3 bg-white rounded-lg border border-gray-200 hover:border-purple-400 cursor-pointer">
+                  <div class="flex items-start justify-between mb-2">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <p class="text-sm font-medium text-gray-800">Q1投資委員会 議事録</p>
+                        <span class="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">下書き</span>
+                      </div>
+                      <p class="text-xs text-gray-500">今日 14:00 · 作成者: 自分</p>
+                    </div>
+                    <button class="flex items-center gap-1 px-2 py-1 text-xs text-purple-600 font-medium bg-purple-50 rounded hover:bg-purple-100">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                      編集
+                    </button>
+                  </div>
+                  <div class="text-xs text-gray-500 italic">まだ内容がありません。会議後に記録を追加してください。</div>
+                </div>
+              </div>
+
+              <!-- AI議事録支援 -->
+              <div class="mt-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                <div class="flex items-center gap-3">
+                  <div class="p-2 rounded-lg bg-purple-100">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-800">AI議事録アシスタント</p>
+                    <p class="text-xs text-gray-500">会議音声から自動で議事録を作成</p>
+                  </div>
+                  <button class="px-3 py-1.5 text-xs font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700">
+                    録音開始
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右: AI & カレンダー -->
+        <div class="space-y-6">
+          <!-- AIインサイト -->
+          <div class="card bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 rounded-xl bg-purple-100">
+                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900">AI インサイト</h3>
+            </div>
+            <div class="space-y-3">
+              <div class="p-3 rounded-xl bg-white border border-gray-200 shadow-sm">
+                <div class="flex items-start gap-3">
+                  <div class="p-1.5 rounded-lg bg-amber-100">
+                    <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                  </div>
+                  <div>
+                    <p class="text-sm text-gray-700">締め切りまであと3時間です。</p>
+                    <button class="mt-2 text-xs text-purple-600 font-medium">対応する →</button>
+                  </div>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-white border border-gray-200 shadow-sm">
+                <div class="flex items-start gap-3">
+                  <div class="p-1.5 rounded-lg bg-blue-100">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                  </div>
+                  <p class="text-sm text-gray-700">生産性+15%向上中！</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- カレンダー -->
+          <div class="card">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 rounded-xl bg-blue-50">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">今日の予定</h3>
+                <p class="text-xs text-gray-500">4件</p>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div class="relative p-3 rounded-xl bg-gray-50 opacity-60">
+                <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-blue-500"></div>
+                <div class="pl-3">
+                  <h4 class="text-sm font-medium text-gray-400 line-through">投資委員会</h4>
+                  <div class="text-xs text-gray-400 mt-1">10:00 - 11:00</div>
+                </div>
+              </div>
+              <div class="relative p-3 rounded-xl bg-blue-50 border border-blue-200">
+                <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-blue-500"></div>
+                <div class="pl-3">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-medium text-gray-900">クライアントA社 MTG</h4>
+                    <span class="px-2 py-0.5 bg-blue-100 text-blue-600 rounded text-xs font-medium animate-pulse">進行中</span>
+                  </div>
+                  <div class="text-xs text-gray-500 mt-1">14:00 - 15:00 · Zoom</div>
+                </div>
+              </div>
+              <div class="relative p-3 rounded-xl bg-gray-50">
+                <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-purple-500"></div>
+                <div class="pl-3">
+                  <h4 class="text-sm font-medium text-gray-900">開発進捗確認</h4>
+                  <div class="text-xs text-gray-500 mt-1">15:30 - 16:00</div>
+                </div>
+              </div>
+              <div class="relative p-3 rounded-xl bg-gray-50">
+                <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-green-500"></div>
+                <div class="pl-3">
+                  <h4 class="text-sm font-medium text-gray-900">新規事業ブレスト</h4>
+                  <div class="text-xs text-gray-500 mt-1">16:30 - 17:30</div>
+                </div>
+              </div>
+            </div>
+            <button class="w-full mt-4 py-3 text-sm text-gray-500 hover:text-blue-600 flex items-center justify-center gap-2 border border-dashed border-gray-300 rounded-xl hover:border-blue-400">
+              Google Calendarと同期
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

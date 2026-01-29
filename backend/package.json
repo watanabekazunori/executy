@@ -1,0 +1,28 @@
+{
+  "name": "executy-backend",
+  "version": "1.0.0",
+  "description": "EXECUTY - AI Executive Task Management Backend",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed": "tsx src/db/seed.ts"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.7.6",
+    "@neondatabase/serverless": "^0.9.0",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.29.0",
+    "hono": "^4.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "drizzle-kit": "^0.20.0",
+    "ts-node": "^10.9.2"
+  }
+}
