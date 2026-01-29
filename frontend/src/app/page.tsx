@@ -788,7 +788,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                 <Sparkles className="w-4 h-4" /> <span className="hidden sm:inline">AI</span>
               </button>
               {/* 新規タスク */}
-              <button onClick={() => setNewTaskOpen(true)} className="flex items-center gap-1 px-2 sm:px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+              <button onClick={() => { setNewTaskOpen(true); if (organizations.length > 0 && !newTaskOrgId) setNewTaskOrgId(organizations[0].id) }} className="flex items-center gap-1 px-2 sm:px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
                 <Plus className="w-4 h-4" /> <span className="hidden sm:inline text-sm font-medium">新規タスク</span>
               </button>
             </div>
@@ -1119,7 +1119,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               <div className="bg-white rounded-xl border border-slate-200">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                   <h2 className="font-semibold text-slate-800">タスク一覧</h2>
-                  <button onClick={() => setNewTaskOpen(true)} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">
+                  <button onClick={() => { setNewTaskOpen(true); if (organizations.length > 0 && !newTaskOrgId) setNewTaskOrgId(organizations[0].id) }} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">
                     <Plus className="w-4 h-4" /> 追加
                   </button>
                 </div>
@@ -2308,10 +2308,17 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               <button onClick={() => { setNewTaskOpen(false); setShowInlineProjectInput(false); setNewProjectInline('') }} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
             </div>
             <div className="p-4 sm:p-6 space-y-4">
-              <input type="text" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder="タスク名..." className="w-full px-3 py-2 border border-slate-200 rounded-lg" />
-              <select value={newTaskOrgId} onChange={(e) => setNewTaskOrgId(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg">
-                {organizations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">タスク名 <span className="text-red-500">*</span></label>
+                <input type="text" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder="タスク名を入力..." className="w-full px-3 py-2 border border-slate-200 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">組織 <span className="text-red-500">*</span></label>
+                <select value={newTaskOrgId} onChange={(e) => setNewTaskOrgId(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg">
+                  {!newTaskOrgId && <option value="">組織を選択してください</option>}
+                  {organizations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              </div>
               {/* プロジェクト選択 */}
               <div>
                 <label className="block text-sm text-slate-600 mb-1">プロジェクト</label>
@@ -2378,7 +2385,15 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               </select>
               <input type="date" value={newTaskDueDate} onChange={(e) => setNewTaskDueDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg" />
               <input type="number" value={newTaskEstimate} onChange={(e) => setNewTaskEstimate(e.target.value)} placeholder="予定時間（分）" className="w-full px-3 py-2 border border-slate-200 rounded-lg" />
-              <button onClick={createNewTask} className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">作成</button>
+              <button
+                onClick={createNewTask}
+                disabled={!newTaskTitle.trim() || !newTaskOrgId}
+                className={`w-full py-2 rounded-lg ${!newTaskTitle.trim() || !newTaskOrgId ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'}`}>
+                作成
+              </button>
+              {(!newTaskTitle.trim() || !newTaskOrgId) && (
+                <p className="text-xs text-red-500 text-center">タスク名と組織は必須です</p>
+              )}
             </div>
           </div>
         </div>
@@ -2451,6 +2466,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                   onClick={() => {
                     setNewTaskOpen(true)
                     setProjectDetailOpen(false)
+                    if (organizations.length > 0 && !newTaskOrgId) setNewTaskOrgId(organizations[0].id)
                   }}
                   className="flex-1 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
                   <Plus className="w-4 h-4 inline mr-1" />タスクを追加
