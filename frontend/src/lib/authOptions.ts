@@ -34,14 +34,30 @@ export const authOptions: AuthOptions = {
       },
       async authorize(credentials) {
         // 開発環境用の簡易認証
-        if (
-          credentials?.email === 'watanabe@fanvest.co.jp' &&
-          credentials?.password === 'dev123'
-        ) {
-          return {
+        const users = [
+          {
             id: 'user-1',
             email: 'watanabe@fanvest.co.jp',
+            password: 'dev123',
             name: '渡邊和則',
+          },
+          {
+            id: 'user-2',
+            email: 'fujiwara.t@fanvest.co.jp',
+            password: 'dev123',
+            name: '藤原',
+          },
+        ];
+
+        const user = users.find(
+          (u) => u.email === credentials?.email && u.password === credentials?.password
+        );
+
+        if (user) {
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
             image: null,
           };
         }
