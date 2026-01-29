@@ -43,12 +43,19 @@ export async function POST(request: NextRequest) {
     // 未完了タスクのみ
     const pendingTasks = tasks.filter(t => t.status !== 'completed')
 
-    // 今日から1週間の日付を生成
+    // 今日から1週間の平日のみを生成
     const dates: string[] = []
-    for (let i = 0; i < 7; i++) {
+    const weekdayNames: string[] = []
+    for (let i = 0; i < 14; i++) { // 2週間分チェックして平日を7日分取得
       const d = new Date()
       d.setDate(d.getDate() + i)
-      dates.push(d.toISOString().split('T')[0])
+      const dayOfWeek = d.getDay()
+      // 土曜(6)と日曜(0)を除外
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        dates.push(d.toISOString().split('T')[0])
+        weekdayNames.push(['日', '月', '火', '水', '木', '金', '土'][dayOfWeek])
+        if (dates.length >= 7) break
+      }
     }
 
     // カレンダーイベントの空き時間を計算するためのデータ
@@ -68,15 +75,21 @@ ${pendingTasks.map(t => `- ${t.title} (優先度: ${t.priority}, 予想時間: $
 ## カレンダーの予定（忙しい時間帯）
 ${busySlots.length > 0 ? busySlots.map(s => `- ${s.date} ${s.start}〜${s.end}: ${s.title}`).join('\n') : '予定なし'}
 
+## 作業可能な日程（平日のみ）
+${dates.map((d, i) => `- ${d} (${weekdayNames[i]}曜日)`).join('\n')}
+
 ## 作業時間
-${workingHours.start}〜${workingHours.end}
+平日 10:00〜18:00（土日祝は作業不可）
 
 ## スケジューリングのルール
-1. 高優先度のタスクを先に配置
-2. 期限が近いタスクを優先
-3. カレンダーの予定と重ならないように配置
-4. 集中力が高い午前中に重要なタスクを配置
-5. 1タスクの作業時間は最大2時間とし、それ以上は分割
+1. 必ず平日（月〜金）の10:00〜18:00の間にスケジュールを配置すること
+2. 土曜日・日曜日・祝日にはタスクを配置しないこと
+3. 高優先度のタスクを先に配置
+4. 期限が近いタスクを優先
+5. カレンダーの予定と重ならないように配置
+6. 集中力が高い午前中（10:00〜12:00）に重要なタスクを配置
+7. 1タスクの作業時間は最大2時間とし、それ以上は分割
+8. 昼休憩（12:00〜13:00）を避ける
 
 以下のJSON形式で回答してください：
 {
