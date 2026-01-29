@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, tasks } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 
-// GET: タスク詳細取得
+// GET: タスク詳細取得（ユーザー別）
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const task = await db
       .select()
       .from(tasks)
-      .where(eq(tasks.id, params.id))
+      .where(and(eq(tasks.id, params.id), eq(tasks.createdByEmail, session.user.email)))
       .then(r => r[0]);
 
     if (!task) {
@@ -25,11 +32,16 @@ export async function GET(
   }
 }
 
-// PATCH: タスク更新
+// PATCH: タスク更新（ユーザー別）
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const data = await request.json();
 
@@ -53,7 +65,7 @@ export async function PATCH(
     const result = await db
       .update(tasks)
       .set(updateData)
-      .where(eq(tasks.id, params.id))
+      .where(and(eq(tasks.id, params.id), eq(tasks.createdByEmail, session.user.email)))
       .returning();
 
     if (result.length === 0) {
@@ -67,15 +79,20 @@ export async function PATCH(
   }
 }
 
-// DELETE: タスク削除
+// DELETE: タスク削除（ユーザー別）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const result = await db
       .delete(tasks)
-      .where(eq(tasks.id, params.id))
+      .where(and(eq(tasks.id, params.id), eq(tasks.createdByEmail, session.user.email)))
       .returning();
 
     if (result.length === 0) {
