@@ -62,7 +62,7 @@ export default function Dashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false) // モバイルではデフォルト非表示
   const [activeMenu, setActiveMenu] = useState('dashboard')
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false)
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
@@ -665,8 +665,17 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
+      {/* モバイルオーバーレイ */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* サイドバー */}
-      <aside className={`fixed left-0 top-0 h-full bg-white border-r border-slate-200 z-40 transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'}`}>
+      <aside className={`fixed left-0 top-0 h-full bg-white border-r border-slate-200 z-40 transition-all duration-300
+        ${sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:w-16 lg:translate-x-0'}`}>
         <div className="flex flex-col h-full">
           {/* ロゴ */}
           <div className="flex items-center justify-between px-4 py-4 border-b border-slate-200">
@@ -734,12 +743,23 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
       </aside>
 
       {/* メインコンテンツ */}
-      <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-16'}`}>
+      <main className="flex-1 transition-all duration-300 ml-0 lg:ml-16">
         {/* ヘッダー */}
-        <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-6 py-4">
+        <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-4 lg:px-6 py-3 lg:py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-slate-800">{menuItems.find(m => m.id === activeMenu)?.name || 'ダッシュボード'}</h1>
+            {/* モバイルメニューボタン */}
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden p-2 rounded-lg hover:bg-slate-100"
+              >
+                <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <h1 className="text-lg lg:text-xl font-bold text-slate-800">{menuItems.find(m => m.id === activeMenu)?.name || 'ダッシュボード'}</h1>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-3">
               {/* 通知 */}
               <div className="relative">
                 <button onClick={() => setNotifOpen(!notifOpen)} className="p-2 rounded-lg hover:bg-slate-100 relative">
@@ -747,7 +767,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                   {unreadNotifs > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />}
                 </button>
                 {notifOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-200 rounded-xl shadow-lg z-50">
+                  <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white border border-slate-200 rounded-xl shadow-lg z-50">
                     <div className="p-3 border-b border-slate-100"><span className="font-medium text-slate-800">通知</span></div>
                     <div className="max-h-64 overflow-y-auto">
                       {notifications.map(n => (
@@ -759,36 +779,36 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                   </div>
                 )}
               </div>
-              {/* 週間レビュー */}
-              <button onClick={() => setWeeklyReviewOpen(true)} className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200">
+              {/* 週間レビュー - モバイル非表示 */}
+              <button onClick={() => setWeeklyReviewOpen(true)} className="hidden sm:flex px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200">
                 <RefreshCw className="w-4 h-4 inline mr-1" /> 週間レビュー
               </button>
               {/* AIアシスタント */}
-              <button onClick={() => setActiveMenu('ai')} className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg text-sm font-medium hover:from-purple-600 hover:to-blue-600">
-                <Sparkles className="w-4 h-4" /> AI
+              <button onClick={() => setActiveMenu('ai')} className="flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg text-sm font-medium hover:from-purple-600 hover:to-blue-600">
+                <Sparkles className="w-4 h-4" /> <span className="hidden sm:inline">AI</span>
               </button>
               {/* 新規タスク */}
-              <button onClick={() => setNewTaskOpen(true)} className="flex items-center gap-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                <Plus className="w-4 h-4" /> <span className="text-sm font-medium">新規タスク</span>
+              <button onClick={() => setNewTaskOpen(true)} className="flex items-center gap-1 px-2 sm:px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                <Plus className="w-4 h-4" /> <span className="hidden sm:inline text-sm font-medium">新規タスク</span>
               </button>
             </div>
           </div>
         </header>
 
         {/* コンテンツエリア */}
-        <div className="p-6">
+        <div className="p-3 sm:p-4 lg:p-6">
           {/* ダッシュボード */}
           {activeMenu === 'dashboard' && (
             <div className="space-y-6">
               {/* タイマー表示 */}
               {activeTimer && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                     <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-green-700 font-medium">{activeTimer.taskTitle}</span>
-                    <span className="text-2xl font-mono text-green-800">{timerDisplay}</span>
+                    <span className="text-green-700 font-medium text-sm sm:text-base truncate max-w-[150px] sm:max-w-none">{activeTimer.taskTitle}</span>
+                    <span className="text-xl sm:text-2xl font-mono text-green-800">{timerDisplay}</span>
                   </div>
-                  <button onClick={stopTimer} className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm">
+                  <button onClick={stopTimer} className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm whitespace-nowrap">
                     <Pause className="w-4 h-4 inline mr-1" /> 停止
                   </button>
                 </div>
@@ -825,55 +845,55 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               </div>
 
               {/* 統計カード（クリック可能） */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
                 <div
                   onClick={() => setTaskFilter('all')}
-                  className={`bg-white rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'all' ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'}`}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center"><ListTodo className="w-5 h-5 text-blue-600" /></div>
-                    <span className="text-sm text-slate-600">未完了</span>
+                  className={`bg-white rounded-xl border p-3 sm:p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'all' ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'}`}>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-100 flex items-center justify-center"><ListTodo className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" /></div>
+                    <span className="text-xs sm:text-sm text-slate-600">未完了</span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-800">{tasks.filter(t => t.status !== 'completed').length}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-slate-800">{tasks.filter(t => t.status !== 'completed').length}</p>
                 </div>
                 <div
                   onClick={() => setTaskFilter('completed')}
-                  className={`bg-white rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'completed' ? 'border-green-500 ring-2 ring-green-200' : 'border-slate-200'}`}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center"><CheckCircle2 className="w-5 h-5 text-green-600" /></div>
-                    <span className="text-sm text-slate-600">完了</span>
+                  className={`bg-white rounded-xl border p-3 sm:p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'completed' ? 'border-green-500 ring-2 ring-green-200' : 'border-slate-200'}`}>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-100 flex items-center justify-center"><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" /></div>
+                    <span className="text-xs sm:text-sm text-slate-600">完了</span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-800">{completedCount}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-slate-800">{completedCount}</p>
                 </div>
                 <div
                   onClick={() => setTaskFilter('in_progress')}
-                  className={`bg-white rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'in_progress' ? 'border-yellow-500 ring-2 ring-yellow-200' : 'border-slate-200'}`}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-yellow-600" /></div>
-                    <span className="text-sm text-slate-600">進行中</span>
+                  className={`bg-white rounded-xl border p-3 sm:p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'in_progress' ? 'border-yellow-500 ring-2 ring-yellow-200' : 'border-slate-200'}`}>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-yellow-100 flex items-center justify-center"><TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" /></div>
+                    <span className="text-xs sm:text-sm text-slate-600">進行中</span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-800">{inProgressCount}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-slate-800">{inProgressCount}</p>
                 </div>
                 <div
                   onClick={() => setTaskFilter('overdue')}
-                  className={`bg-white rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'overdue' ? 'border-red-500 ring-2 ring-red-200' : 'border-slate-200'}`}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
-                    <span className="text-sm text-slate-600">期限超過</span>
+                  className={`bg-white rounded-xl border p-3 sm:p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'overdue' ? 'border-red-500 ring-2 ring-red-200' : 'border-slate-200'}`}>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-red-100 flex items-center justify-center"><AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" /></div>
+                    <span className="text-xs sm:text-sm text-slate-600">期限超過</span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-800">{overdueCount}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-slate-800">{overdueCount}</p>
                 </div>
               </div>
 
               {/* タスクリスト（完了を除外） */}
               <div className="bg-white rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 gap-2 sm:gap-0">
                   <h2 className="font-semibold text-slate-800">タスク一覧</h2>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                     {/* 組織フィルター */}
                     <select
                       value={orgFilter}
                       onChange={(e) => setOrgFilter(e.target.value)}
-                      className="px-2 py-1 border border-slate-200 rounded-lg text-sm">
+                      className="px-2 py-1 border border-slate-200 rounded-lg text-xs sm:text-sm">
                       <option value="all">全組織</option>
                       {organizations.map(org => (
                         <option key={org.id} value={org.id}>{org.name}</option>
@@ -883,16 +903,16 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                     <select
                       value={taskSort}
                       onChange={(e) => setTaskSort(e.target.value as 'priority' | 'dueDate' | 'created')}
-                      className="px-2 py-1 border border-slate-200 rounded-lg text-sm">
+                      className="px-2 py-1 border border-slate-200 rounded-lg text-xs sm:text-sm">
                       <option value="priority">優先度順</option>
                       <option value="dueDate">期限順</option>
                       <option value="created">作成順</option>
                     </select>
-                    {/* フィルタ */}
-                    <div className="flex gap-1">
+                    {/* フィルタ - モバイルではスクロール */}
+                    <div className="flex gap-1 overflow-x-auto">
                       {(['all', 'today', 'in_progress', 'overdue', 'completed'] as const).map(f => (
                         <button key={f} onClick={() => setTaskFilter(f)}
-                          className={`px-2 py-1 rounded-lg text-xs ${taskFilter === f ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
+                          className={`px-2 py-1 rounded-lg text-xs whitespace-nowrap ${taskFilter === f ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
                           {f === 'all' ? '全て' : f === 'today' ? '今日' : f === 'in_progress' ? '進行中' : f === 'overdue' ? '期限超過' : '完了'}
                         </button>
                       ))}
@@ -923,24 +943,24 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                         const actual = task.actualMinutes || 0
                         const remaining = Math.max(0, estimated - actual)
                         return (
-                        <div key={task.id} className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer" onClick={() => openTaskDetail(task)}>
-                          <div className="flex items-center gap-3">
+                        <div key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between px-3 sm:px-5 py-3 sm:py-4 hover:bg-slate-50 cursor-pointer gap-2 sm:gap-0" onClick={() => openTaskDetail(task)}>
+                          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                             <button onClick={(e) => { e.stopPropagation(); updateTaskAPI(task.id, { status: 'completed' }).then(() => loadData()) }}
-                              className={`w-5 h-5 rounded border-2 flex items-center justify-center ${task.status === 'completed' ? 'bg-green-500 border-green-500' : 'border-slate-300 hover:border-green-500 hover:bg-green-50'}`}>
+                              className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${task.status === 'completed' ? 'bg-green-500 border-green-500' : 'border-slate-300 hover:border-green-500 hover:bg-green-50'}`}>
                               {task.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-white" />}
                             </button>
-                            <div>
-                              <p className={`font-medium ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task.title}</p>
-                              <div className="flex items-center gap-2 mt-1">
+                            <div className="min-w-0 flex-1">
+                              <p className={`font-medium text-sm sm:text-base truncate ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task.title}</p>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 {task.projectId && <span className="text-xs text-slate-500">{getProjectById(task.projectId)?.name}</span>}
                                 {task.dueDate && <span className={`text-xs ${new Date(task.dueDate) < new Date() && task.status !== 'completed' ? 'text-red-500 font-medium' : 'text-slate-500'}`}>期限: {task.dueDate}</span>}
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 sm:gap-3 ml-7 sm:ml-0">
                             {/* 時間情報 */}
                             {estimated > 0 && (
-                              <div className="text-right mr-2">
+                              <div className="text-right mr-1 sm:mr-2">
                                 <div className="flex items-center gap-1 text-xs text-slate-500">
                                   <Clock className="w-3 h-3" />
                                   <span>{estimated}分</span>
@@ -967,7 +987,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                                 <Play className="w-4 h-4" />
                               </button>
                             )}
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColors[task.priority]}`}>{priorityLabels[task.priority]}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${priorityColors[task.priority]}`}>{priorityLabels[task.priority]}</span>
                           </div>
                         </div>
                         )})
@@ -977,18 +997,18 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
 
               {/* 今日のスケジュール（Googleカレンダー + AIスケジュール統合） */}
               <div className="bg-white rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 gap-2">
                   <h2 className="font-semibold text-slate-800">今日のスケジュール</h2>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => { setScheduleModalOpen(true); runAiScheduling() }}
-                      className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700">
+                      className="flex items-center gap-1 text-xs sm:text-sm text-purple-600 hover:text-purple-700">
                       <Sparkles className="w-4 h-4" />
                       AI提案
                     </button>
                     <button
                       onClick={loadCalendarEvents}
-                      className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+                      className="flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:text-blue-700"
                       disabled={calendarLoading}>
                       {calendarLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                       更新
@@ -1042,9 +1062,9 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                     }
 
                     return allEvents.map(event => (
-                      <div key={event.id} className={`px-5 py-3 hover:bg-slate-50 ${event.type === 'ai' ? 'bg-purple-50/50' : ''}`}>
-                        <div className="flex items-start gap-3">
-                          <div className="text-center min-w-[50px]">
+                      <div key={event.id} className={`px-3 sm:px-5 py-3 hover:bg-slate-50 ${event.type === 'ai' ? 'bg-purple-50/50' : ''}`}>
+                        <div className="flex items-start gap-2 sm:gap-3">
+                          <div className="text-center min-w-[45px] sm:min-w-[50px]">
                             <p className={`text-sm font-medium ${event.type === 'ai' ? 'text-purple-600' : 'text-blue-600'}`}>
                               {event.allDay ? '終日' : new Date(event.startTime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                             </p>
@@ -2055,32 +2075,32 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
 
       {/* タスク詳細モーダル */}
       {taskDetailOpen && selectedTask && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setTaskDetailOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={() => setTaskDetailOpen(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* 固定ヘッダー */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white rounded-t-2xl sticky top-0 z-10">
-              <div>
-                <h2 className="font-semibold text-slate-800">{selectedTask.title}</h2>
-                <p className="text-sm text-slate-500">{getOrgById(selectedTask.organizationId)?.name} {selectedTask.projectId && `/ ${projects.find(p => p.id === selectedTask.projectId)?.name}`}</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-white rounded-t-2xl sticky top-0 z-10 gap-2">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-semibold text-slate-800 text-sm sm:text-base truncate">{selectedTask.title}</h2>
+                <p className="text-xs sm:text-sm text-slate-500 truncate">{getOrgById(selectedTask.organizationId)?.name} {selectedTask.projectId && `/ ${projects.find(p => p.id === selectedTask.projectId)?.name}`}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                 {editingTask ? (
-                  <button onClick={saveTaskDetail} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm"><Save className="w-4 h-4 inline mr-1" />保存</button>
+                  <button onClick={saveTaskDetail} className="px-2 sm:px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs sm:text-sm"><Save className="w-4 h-4 inline mr-1" />保存</button>
                 ) : (
-                  <button onClick={() => setEditingTask(true)} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm"><Edit3 className="w-4 h-4 inline mr-1" />編集</button>
+                  <button onClick={() => setEditingTask(true)} className="px-2 sm:px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs sm:text-sm"><Edit3 className="w-4 h-4 inline mr-1" />編集</button>
                 )}
                 {selectedTask.status !== 'completed' && (
                   <button onClick={() => {
                     const updated = { ...selectedTask, status: 'completed' }
                     setTasks(tasks.map(t => t.id === selectedTask.id ? updated : t))
                     setTaskDetailOpen(false)
-                  }} className="px-3 py-1.5 bg-green-500 text-white rounded-lg text-sm"><CheckCircle2 className="w-4 h-4 inline mr-1" />完了</button>
+                  }} className="px-2 sm:px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs sm:text-sm"><CheckCircle2 className="w-4 h-4 inline mr-1" /><span className="hidden sm:inline">完了</span></button>
                 )}
-                <button onClick={() => setTaskDetailOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
+                <button onClick={() => setTaskDetailOpen(false)} className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
               </div>
             </div>
             {/* スクロール可能なコンテンツ */}
-            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
               {/* タイトル編集 */}
               {editingTask && (
                 <div>
@@ -2281,13 +2301,13 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
 
       {/* 新規タスクモーダル */}
       {newTaskOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setNewTaskOpen(false); setShowInlineProjectInput(false); setNewProjectInline('') }}>
-          <div className="bg-white rounded-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={() => { setNewTaskOpen(false); setShowInlineProjectInput(false); setNewProjectInline('') }}>
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl">
               <h2 className="font-semibold text-slate-800">新規タスク</h2>
               <button onClick={() => { setNewTaskOpen(false); setShowInlineProjectInput(false); setNewProjectInline('') }} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               <input type="text" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder="タスク名..." className="w-full px-3 py-2 border border-slate-200 rounded-lg" />
               <select value={newTaskOrgId} onChange={(e) => setNewTaskOrgId(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg">
                 {organizations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
