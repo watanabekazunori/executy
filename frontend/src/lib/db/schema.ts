@@ -1,4 +1,4 @@
-// EXECUTY Database Schema - Drizzle ORM for Neon
+// Aide Database Schema - Drizzle ORM
 import { pgTable, uuid, varchar, text, timestamp, integer, boolean, jsonb, primaryKey } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 

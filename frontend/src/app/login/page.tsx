@@ -1,48 +1,24 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { Suspense } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Briefcase, Mail, Lock, AlertTriangle, Loader2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Briefcase, AlertTriangle, Shield } from 'lucide-react';
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
   const error = searchParams.get('error');
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(error);
-
-  const handleCredentialsLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setLoginError(null);
-
-    try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setLoginError('メールアドレスまたはパスワードが正しくありません');
-      } else {
-        router.push(callbackUrl);
-      }
-    } catch {
-      setLoginError('ログイン中にエラーが発生しました');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleGoogleLogin = () => {
     signIn('google', { callbackUrl });
   };
+
+  const errorMessage = error === 'AccessDenied'
+    ? '許可されていないアカウントです。社内Googleアカウントでログインしてください。'
+    : error
+    ? 'ログイン中にエラーが発生しました。もう一度お試しください。'
+    : null;
 
   return (
     <div className="w-full max-w-md">
@@ -53,81 +29,32 @@ function LoginForm() {
           </div>
           <div className="text-left">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent">
-              EXECUTY
+              Aide
             </h1>
-            <p className="text-xs text-slate-500">Executive Task Manager</p>
+            <p className="text-xs text-slate-500">AI Task Assistant</p>
           </div>
         </div>
-        <p className="text-slate-600">エグゼクティブ向けAIタスク管理</p>
+        <p className="text-slate-600">AIタスク管理アシスタント</p>
       </div>
 
       <div className="card p-8">
         <h2 className="text-xl font-semibold text-center mb-6 text-slate-900">ログイン</h2>
 
-        {loginError && (
+        {errorMessage && (
           <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl mb-6">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            <p className="text-sm text-red-600">{loginError}</p>
+            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <p className="text-sm text-red-600">{errorMessage}</p>
           </div>
         )}
 
-        <form onSubmit={handleCredentialsLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm text-slate-600 mb-2">メールアドレス</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input pl-12"
-                placeholder="watanabe@fanvest.co.jp"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-slate-600 mb-2">パスワード</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input pl-12"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full btn-primary py-3 flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>ログイン中...</span>
-              </>
-            ) : (
-              <span>ログイン</span>
-            )}
-          </button>
-        </form>
-
-        <div className="flex items-center gap-4 my-6">
-          <div className="flex-1 h-px bg-slate-200" />
-          <span className="text-sm text-slate-500">または</span>
-          <div className="flex-1 h-px bg-slate-200" />
-        </div>
+        <p className="text-sm text-slate-500 text-center mb-6">
+          社内Googleアカウントでログインしてください
+        </p>
 
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full btn-ghost py-3 flex items-center justify-center gap-3"
+          className="w-full bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all rounded-xl py-3.5 flex items-center justify-center gap-3 font-medium text-slate-700"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -138,10 +65,9 @@ function LoginForm() {
           <span>Googleでログイン</span>
         </button>
 
-        <div className="mt-6 p-3 bg-slate-100 rounded-lg">
-          <p className="text-xs text-slate-500 text-center">
-            開発用ログイン: watanabe@fanvest.co.jp / dev123
-          </p>
+        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-400">
+          <Shield className="w-3.5 h-3.5" />
+          <span>組織アカウントのみアクセス可能</span>
         </div>
       </div>
     </div>

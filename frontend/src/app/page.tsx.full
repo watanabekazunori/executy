@@ -130,7 +130,7 @@ export default function Dashboard() {
 
   // AIチャット
   const [chatMessages, setChatMessages] = useState<{role: string, content: string}[]>([
-    { role: 'assistant', content: 'こんにちは！EXECUTYのAIアシスタントです。以下のことをお手伝いできます：\n\n• タスクの分解・サブタスク自動生成\n• 工数見積もり\n• 優先度の提案\n• 返信文の自動生成\n• 日報の自動生成\n\n何かお手伝いしましょうか？' }
+    { role: 'assistant', content: 'こんにちは！AideのAIアシスタントです。以下のことをお手伝いできます：\n\n• タスクの分解・サブタスク自動生成\n• 工数見積もり\n• 優先度の提案\n• 返信文の自動生成\n• 日報の自動生成\n\n何かお手伝いしましょうか？' }
   ])
   const [chatInput, setChatInput] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
@@ -492,8 +492,8 @@ export default function Dashboard() {
                 <Briefcase className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500">EXECUTY</h1>
-                <p className="text-xs text-slate-500">Executive Task Manager</p>
+                <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500">Aide</h1>
+                <p className="text-xs text-slate-500">AI Task Assistant</p>
               </div>
             </div>
           </div>

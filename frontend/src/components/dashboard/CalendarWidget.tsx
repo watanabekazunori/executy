@@ -46,15 +46,15 @@ export default function CalendarWidget() {
                 <div className="h-full bg-blue-500" />
               </div>
 
-              <div className="pl-3">
-                <div className="flex items-start justify-between mb-2">
+              <div className="pl-3 min-w-0">
+                <div className="flex items-start justify-between mb-2 min-w-0">
                   <div>
-                    <h4 className="text-sm font-medium text-slate-800">
+                    <h4 className="text-sm font-medium text-slate-800 truncate">
                       {event.title}
                     </h4>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="flex items-center gap-1 text-xs text-slate-500">
-                        <Clock className="w-3 h-3" />
+                      <span className="flex items-center gap-1 text-xs text-slate-500 truncate">
+                        <Clock className="w-3 h-3 flex-shrink-0" />
                         {event.time}
                       </span>
                     </div>
@@ -63,11 +63,11 @@ export default function CalendarWidget() {
 
                 <div className="flex items-center gap-3 text-xs text-slate-500">
                   <span className="flex items-center gap-1">
-                    {event.isOnline ? <Video className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
+                    {event.isOnline ? <Video className="w-3 h-3 flex-shrink-0" /> : <MapPin className="w-3 h-3 flex-shrink-0" />}
                     {event.location}
                   </span>
                   <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
+                    <Users className="w-3 h-3 flex-shrink-0" />
                     {event.attendees}名
                   </span>
                 </div>

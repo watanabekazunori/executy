@@ -91,7 +91,7 @@ export function IntegrationsProvider({ children }: { children: React.ReactNode }
     // クライアントサイドでのみ実行
     if (typeof window === 'undefined') return;
 
-    const saved = localStorage.getItem('executy_integrations');
+    const saved = localStorage.getItem('aide_integrations');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -118,7 +118,7 @@ export function IntegrationsProvider({ children }: { children: React.ReactNode }
       const newConfig = { ...prev, ...updates };
       // クライアントサイドでのみ保存
       if (typeof window !== 'undefined') {
-        localStorage.setItem('executy_integrations', JSON.stringify(newConfig));
+        localStorage.setItem('aide_integrations', JSON.stringify(newConfig));
       }
       return newConfig;
     });

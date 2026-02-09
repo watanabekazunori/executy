@@ -1,6 +1,8 @@
 import { AuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import CredentialsProvider from 'next-auth/providers/credentials';
+
+// 許可するメールドメイン（環境変数で設定可能）
+const ALLOWED_DOMAINS = (process.env.ALLOWED_EMAIL_DOMAINS || 'fanvest.co.jp').split(',').map(d => d.trim());
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -25,51 +27,23 @@ export const authOptions: AuthOptions = {
         },
       },
     }),
-    // 開発用のCredentials認証
-    CredentialsProvider({
-      name: 'Development Login',
-      credentials: {
-        email: { label: 'Email', type: 'email', placeholder: 'watanabe@fanvest.co.jp' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        // 開発環境用の簡易認証
-        const users = [
-          {
-            id: 'user-1',
-            email: 'watanabe@fanvest.co.jp',
-            password: 'dev123',
-            name: '渡邊和則',
-          },
-          {
-            id: 'user-2',
-            email: 'fujiwara.t@fanvest.co.jp',
-            password: 'dev123',
-            name: '藤原',
-          },
-        ];
-
-        const user = users.find(
-          (u) => u.email === credentials?.email && u.password === credentials?.password
-        );
-
-        if (user) {
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            image: null,
-          };
-        }
-        return null;
-      },
-    }),
   ],
   pages: {
     signIn: '/login',
     error: '/login',
   },
   callbacks: {
+    // サインイン時にドメインチェック
+    async signIn({ account, profile }) {
+      if (account?.provider === 'google') {
+        const email = profile?.email || '';
+        const domain = email.split('@')[1];
+        if (!ALLOWED_DOMAINS.includes(domain)) {
+          return '/login?error=AccessDenied';
+        }
+      }
+      return true;
+    },
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
@@ -95,5 +69,5 @@ export const authOptions: AuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'executy-secret-key-change-in-production',
+  secret: process.env.NEXTAUTH_SECRET,
 };

@@ -10,8 +10,8 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'EXECUTY - AI Executive Task Management',
-  description: '経営者・マネージャーのための全自動AIタスク管理システム',
+  title: 'Aide - AI Task Assistant',
+  description: 'AIタスク管理アシスタント',
   keywords: ['タスク管理', 'AI', '経営者', 'マネージャー', 'プロジェクト管理'],
 }
 

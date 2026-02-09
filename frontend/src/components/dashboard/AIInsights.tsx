@@ -185,14 +185,14 @@ export default function AIInsights() {
             key={action.id}
             onClick={() => handleQuickAction(action.id)}
             disabled={!!processingAction}
-            className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs text-slate-600 hover:text-slate-800 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs text-slate-600 hover:text-slate-800 truncate transition-colors disabled:opacity-50"
           >
             {processingAction === action.id ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
             ) : (
-              <action.icon className="w-3.5 h-3.5" />
+              <action.icon className="w-3.5 h-3.5 flex-shrink-0" />
             )}
-            <span>{action.label}</span>
+            <span className="truncate">{action.label}</span>
           </button>
         ))}
       </div>
@@ -227,7 +227,7 @@ export default function AIInsights() {
                     <Icon className={`w-4 h-4 ${colors.text}`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium text-slate-800 mb-1">{insight.title}</h4>
+                    <h4 className="text-sm font-medium text-slate-800 mb-1 truncate">{insight.title}</h4>
                     <p className="text-xs text-slate-500 line-clamp-2">{insight.description}</p>
                     {insight.action && (
                       <button className="mt-2 text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

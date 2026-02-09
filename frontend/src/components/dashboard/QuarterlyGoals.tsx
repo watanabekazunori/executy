@@ -41,12 +41,12 @@ export default function QuarterlyGoals() {
           {goals.map((goal) => (
             <div key={goal.id} className="p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
               <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span className="text-xs text-slate-500">{goal.orgName}</span>
+                    <span className="text-xs text-slate-500 truncate">{goal.orgName}</span>
                   </div>
-                  <h4 className="font-medium text-slate-800">{goal.title}</h4>
+                  <h4 className="font-medium text-slate-800 truncate">{goal.title}</h4>
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-slate-900">{goal.progress}%</p>

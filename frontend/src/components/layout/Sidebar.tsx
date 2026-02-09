@@ -107,8 +107,8 @@ export default function Sidebar({ isOpen, onToggle, selectedOrgId, onSelectOrg }
                 <Briefcase className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent">EXECUTY</h1>
-                <p className="text-xs text-slate-500">Executive Task Manager</p>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent">Aide</h1>
+                <p className="text-xs text-slate-500">AI Task Assistant</p>
               </div>
             </div>
             <button onClick={onToggle} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors hidden lg:block">
@@ -174,11 +174,13 @@ export default function Sidebar({ isOpen, onToggle, selectedOrgId, onSelectOrg }
                           <Building2 className="w-4 h-4 text-white" />
                         )}
                       </div>
-                      <div className="flex-1 text-left">
-                        <span className="text-sm text-slate-700 truncate">{org.name}</span>
-                        {org.taskCount !== undefined && org.taskCount > 0 && (
-                          <span className="ml-2 text-xs text-slate-500">{org.taskCount}タスク</span>
-                        )}
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-slate-700 truncate">{org.name}</span>
+                          {org.taskCount !== undefined && org.taskCount > 0 && (
+                            <span className="text-xs text-slate-500 flex-shrink-0">{org.taskCount}タスク</span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   ))}
@@ -202,9 +204,9 @@ export default function Sidebar({ isOpen, onToggle, selectedOrgId, onSelectOrg }
                           : 'hover:bg-slate-50 text-slate-600'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <item.icon className="w-5 h-5" />
-                        <span className="text-sm font-medium">{item.name}</span>
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <item.icon className="w-5 h-5 flex-shrink-0" />
+                        <span className="text-sm font-medium truncate">{item.name}</span>
                       </div>
                       {badge && (
                         <span className="px-2 py-0.5 bg-primary-100 text-primary-600 rounded-full text-xs font-medium">
@@ -231,8 +233,8 @@ export default function Sidebar({ isOpen, onToggle, selectedOrgId, onSelectOrg }
                         : 'hover:bg-slate-50 text-slate-600'
                     }`}
                   >
-                    <item.icon className="w-5 h-5" />
-                    <span className="text-sm font-medium">{item.name}</span>
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm font-medium truncate">{item.name}</span>
                   </button>
                 </li>
               ))}

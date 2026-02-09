@@ -87,7 +87,7 @@ export async function createCalendarEvent(
     attendees: event.attendees?.map(email => ({ email })),
     conferenceData: event.meetingUrl ? undefined : {
       createRequest: {
-        requestId: `executy-${Date.now()}`,
+        requestId: `aide-${Date.now()}`,
         conferenceSolutionKey: { type: 'hangoutsMeet' },
       },
     },

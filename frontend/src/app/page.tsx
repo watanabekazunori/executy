@@ -694,7 +694,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
                 <Zap className="w-4 h-4 text-white" />
               </div>
-              {sidebarOpen && <span className="font-bold text-slate-800">EXECUTY</span>}
+              {sidebarOpen && <span className="font-bold text-slate-800">Aide</span>}
             </div>
           </div>
 
@@ -860,36 +860,36 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                 <div
                   onClick={() => setTaskFilter('all')}
                   className={`bg-white rounded-xl border p-3 sm:p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'all' ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'}`}>
-                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-100 flex items-center justify-center"><ListTodo className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" /></div>
-                    <span className="text-xs sm:text-sm text-slate-600">未完了</span>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2 min-w-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0"><ListTodo className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" /></div>
+                    <span className="text-xs sm:text-sm text-slate-600 truncate">未完了</span>
                   </div>
                   <p className="text-xl sm:text-2xl font-bold text-slate-800">{tasks.filter(t => t.status !== 'completed').length}</p>
                 </div>
                 <div
                   onClick={() => setTaskFilter('completed')}
                   className={`bg-white rounded-xl border p-3 sm:p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'completed' ? 'border-green-500 ring-2 ring-green-200' : 'border-slate-200'}`}>
-                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-100 flex items-center justify-center"><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" /></div>
-                    <span className="text-xs sm:text-sm text-slate-600">完了</span>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2 min-w-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0"><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" /></div>
+                    <span className="text-xs sm:text-sm text-slate-600 truncate">完了</span>
                   </div>
                   <p className="text-xl sm:text-2xl font-bold text-slate-800">{completedCount}</p>
                 </div>
                 <div
                   onClick={() => setTaskFilter('in_progress')}
                   className={`bg-white rounded-xl border p-3 sm:p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'in_progress' ? 'border-yellow-500 ring-2 ring-yellow-200' : 'border-slate-200'}`}>
-                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-yellow-100 flex items-center justify-center"><TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" /></div>
-                    <span className="text-xs sm:text-sm text-slate-600">進行中</span>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2 min-w-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0"><TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" /></div>
+                    <span className="text-xs sm:text-sm text-slate-600 truncate">進行中</span>
                   </div>
                   <p className="text-xl sm:text-2xl font-bold text-slate-800">{inProgressCount}</p>
                 </div>
                 <div
                   onClick={() => setTaskFilter('overdue')}
                   className={`bg-white rounded-xl border p-3 sm:p-5 cursor-pointer transition-all hover:shadow-md ${taskFilter === 'overdue' ? 'border-red-500 ring-2 ring-red-200' : 'border-slate-200'}`}>
-                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-red-100 flex items-center justify-center"><AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" /></div>
-                    <span className="text-xs sm:text-sm text-slate-600">期限超過</span>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2 min-w-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0"><AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" /></div>
+                    <span className="text-xs sm:text-sm text-slate-600 truncate">期限超過</span>
                   </div>
                   <p className="text-xl sm:text-2xl font-bold text-slate-800">{overdueCount}</p>
                 </div>
@@ -962,18 +962,18 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                             </button>
                             <div className="min-w-0 flex-1">
                               <p className={`font-medium text-sm sm:text-base truncate ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task.title}</p>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                {task.projectId && <span className="text-xs text-slate-500">{getProjectById(task.projectId)?.name}</span>}
-                                {task.dueDate && <span className={`text-xs ${new Date(task.dueDate) < new Date() && task.status !== 'completed' ? 'text-red-500 font-medium' : 'text-slate-500'}`}>期限: {task.dueDate}</span>}
+                              <div className="flex items-center gap-2 mt-1 flex-wrap min-w-0">
+                                {task.projectId && <span className="text-xs text-slate-500 truncate max-w-[100px]">{getProjectById(task.projectId)?.name}</span>}
+                                {task.dueDate && <span className={`text-xs flex-shrink-0 ${new Date(task.dueDate) < new Date() && task.status !== 'completed' ? 'text-red-500 font-medium' : 'text-slate-500'}`}>期限: {task.dueDate}</span>}
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 sm:gap-3 ml-7 sm:ml-0">
+                          <div className="flex items-center gap-2 sm:gap-3 ml-7 sm:ml-0 flex-shrink-0">
                             {/* 時間情報 */}
                             {estimated > 0 && (
-                              <div className="text-right mr-1 sm:mr-2">
-                                <div className="flex items-center gap-1 text-xs text-slate-500">
-                                  <Clock className="w-3 h-3" />
+                              <div className="text-right mr-1 sm:mr-2 flex-shrink-0">
+                                <div className="flex items-center gap-1 text-xs text-slate-500 whitespace-nowrap">
+                                  <Clock className="w-3 h-3 flex-shrink-0" />
                                   <span>{estimated}分</span>
                                 </div>
                                 {actual > 0 && (
@@ -986,19 +986,19 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                             {activeTimer?.taskId === task.id ? (
                               <button
                                 onClick={(e) => { e.stopPropagation(); stopTimer() }}
-                                className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-medium hover:bg-red-200">
-                                <Pause className="w-3 h-3" />
+                                className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-medium hover:bg-red-200 whitespace-nowrap">
+                                <Pause className="w-3 h-3 flex-shrink-0" />
                                 {timerDisplay}
                               </button>
                             ) : (
                               <button
                                 onClick={(e) => { e.stopPropagation(); startTimer(task.id, task.title) }}
-                                className="p-1.5 rounded-lg hover:bg-green-100 text-slate-400 hover:text-green-600"
+                                className="p-1.5 rounded-lg hover:bg-green-100 text-slate-400 hover:text-green-600 flex-shrink-0"
                                 title="タイマー開始">
                                 <Play className="w-4 h-4" />
                               </button>
                             )}
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${priorityColors[task.priority]}`}>{priorityLabels[task.priority]}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${priorityColors[task.priority]}`}>{priorityLabels[task.priority]}</span>
                           </div>
                         </div>
                         )})
@@ -1075,32 +1075,32 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                     return allEvents.map(event => (
                       <div key={event.id} className={`px-3 sm:px-5 py-3 hover:bg-slate-50 ${event.type === 'ai' ? 'bg-purple-50/50' : ''}`}>
                         <div className="flex items-start gap-2 sm:gap-3">
-                          <div className="text-center min-w-[45px] sm:min-w-[50px]">
+                          <div className="text-center min-w-[45px] sm:min-w-[50px] flex-shrink-0">
                             <p className={`text-sm font-medium ${event.type === 'ai' ? 'text-purple-600' : 'text-blue-600'}`}>
                               {event.allDay ? '終日' : new Date(event.startTime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                             </p>
                             {!event.allDay && (
-                              <p className="text-xs text-slate-400">
+                              <p className="text-xs text-slate-400 whitespace-nowrap">
                                 〜{new Date(event.endTime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             )}
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-slate-800">{event.title}</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <p className="font-medium text-slate-800 truncate">{event.title}</p>
                               {event.type === 'ai' && (
-                                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 text-xs rounded">AI</span>
+                                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 text-xs rounded flex-shrink-0">AI</span>
                               )}
                             </div>
                             {event.type === 'google' && (event as any).location && (
-                              <p className="text-xs text-slate-500 mt-0.5">{(event as any).location}</p>
+                              <p className="text-xs text-slate-500 mt-0.5 truncate">{(event as any).location}</p>
                             )}
                             {event.type === 'ai' && (event as any).reason && (
-                              <p className="text-xs text-purple-500 mt-0.5">{(event as any).reason}</p>
+                              <p className="text-xs text-purple-500 mt-0.5 truncate">{(event as any).reason}</p>
                             )}
                           </div>
                           {event.type === 'google' && (event as any).htmlLink && (
-                            <a href={(event as any).htmlLink} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-600">
+                            <a href={(event as any).htmlLink} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-600 flex-shrink-0">
                               <ExternalLink className="w-4 h-4" />
                             </a>
                           )}
@@ -1110,7 +1110,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                                 const task = tasks.find(t => t.id === (event as any).taskId)
                                 if (task) openTaskDetail(task)
                               }}
-                              className="text-slate-400 hover:text-purple-600">
+                              className="text-slate-400 hover:text-purple-600 flex-shrink-0">
                               <ChevronRight className="w-4 h-4" />
                             </button>
                           )}
@@ -1136,35 +1136,35 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                 </div>
                 <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
                   {filteredTasks.filter(t => t.status !== 'completed').map(task => (
-                    <div key={task.id} className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer" onClick={() => openTaskDetail(task)}>
-                      <div className="flex items-center gap-3">
+                    <div key={task.id} className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer min-w-0" onClick={() => openTaskDetail(task)}>
+                      <div className="flex items-center gap-3 min-w-0">
                         <button onClick={(e) => { e.stopPropagation(); updateTaskAPI(task.id, { status: 'completed' }).then(() => loadData()) }}
-                          className="w-5 h-5 rounded border-2 border-slate-300 flex items-center justify-center hover:border-green-500 hover:bg-green-50">
+                          className="w-5 h-5 rounded border-2 border-slate-300 flex items-center justify-center hover:border-green-500 hover:bg-green-50 flex-shrink-0">
                         </button>
-                        <div>
-                          <p className="font-medium text-slate-800">{task.title}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">{getOrgById(task.organizationId)?.name} {task.projectId && `/ ${getProjectById(task.projectId)?.name}`}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-800 truncate">{task.title}</p>
+                          <p className="text-xs text-slate-500 mt-0.5 truncate max-w-[200px]">{getOrgById(task.organizationId)?.name} {task.projectId && `/ ${getProjectById(task.projectId)?.name}`}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {/* タイマーボタン */}
                         {activeTimer?.taskId === task.id ? (
                           <button
                             onClick={(e) => { e.stopPropagation(); stopTimer() }}
-                            className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-medium hover:bg-red-200">
-                            <Pause className="w-3 h-3" />
+                            className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-medium hover:bg-red-200 whitespace-nowrap">
+                            <Pause className="w-3 h-3 flex-shrink-0" />
                             {timerDisplay}
                           </button>
                         ) : (
                           <button
                             onClick={(e) => { e.stopPropagation(); startTimer(task.id, task.title) }}
-                            className="p-1.5 hover:bg-blue-100 rounded-lg text-slate-400 hover:text-blue-600"
+                            className="p-1.5 hover:bg-blue-100 rounded-lg text-slate-400 hover:text-blue-600 flex-shrink-0"
                             title="タイマー開始">
                             <Play className="w-4 h-4" />
                           </button>
                         )}
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColors[task.priority]}`}>{priorityLabels[task.priority]}</span>
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${priorityColors[task.priority]}`}>{priorityLabels[task.priority]}</span>
+                        <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                       </div>
                     </div>
                   ))}
@@ -1191,15 +1191,15 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                 {showCompletedTasks && (
                   <div className="divide-y divide-slate-100 border-t border-slate-100 max-h-[300px] overflow-y-auto">
                     {filteredTasks.filter(t => t.status === 'completed').map(task => (
-                      <div key={task.id} className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer" onClick={() => openTaskDetail(task)}>
-                        <div className="flex items-center gap-3">
+                      <div key={task.id} className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer min-w-0" onClick={() => openTaskDetail(task)}>
+                        <div className="flex items-center gap-3 min-w-0">
                           <button onClick={(e) => { e.stopPropagation(); updateTaskAPI(task.id, { status: 'pending' }).then(() => loadData()) }}
-                            className="w-5 h-5 rounded border-2 bg-green-500 border-green-500 flex items-center justify-center">
+                            className="w-5 h-5 rounded border-2 bg-green-500 border-green-500 flex items-center justify-center flex-shrink-0">
                             <CheckCircle2 className="w-3 h-3 text-white" />
                           </button>
-                          <div>
-                            <p className="font-medium line-through text-slate-400">{task.title}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">{getOrgById(task.organizationId)?.name} {task.projectId && `/ ${getProjectById(task.projectId)?.name}`}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium line-through text-slate-400 truncate">{task.title}</p>
+                            <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[200px]">{getOrgById(task.organizationId)?.name} {task.projectId && `/ ${getProjectById(task.projectId)?.name}`}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1235,14 +1235,14 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               </div>
               <div className="grid grid-cols-3 gap-4">
                 {projects.filter(p => !selectedOrgId || p.organizationId === selectedOrgId).map(proj => (
-                  <div key={proj.id} className="bg-white rounded-xl border border-slate-200 p-5 cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setSelectedProject(proj); setProjectDetailOpen(true) }}>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-10 h-10 rounded-lg ${proj.color || 'bg-blue-500'} flex items-center justify-center`}>
+                  <div key={proj.id} className="bg-white rounded-xl border border-slate-200 p-5 cursor-pointer hover:shadow-md transition-shadow min-w-0" onClick={() => { setSelectedProject(proj); setProjectDetailOpen(true) }}>
+                    <div className="flex items-center gap-3 mb-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-lg ${proj.color || 'bg-blue-500'} flex items-center justify-center flex-shrink-0`}>
                         <FolderKanban className="w-5 h-5 text-white" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-800">{proj.name}</h3>
-                        <p className="text-xs text-slate-500">{getOrgById(proj.organizationId)?.name}</p>
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-slate-800 truncate">{proj.name}</h3>
+                        <p className="text-xs text-slate-500 truncate">{getOrgById(proj.organizationId)?.name}</p>
                       </div>
                     </div>
                     {proj.description && <p className="text-sm text-slate-600 line-clamp-2">{proj.description}</p>}
@@ -1264,17 +1264,17 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               <div className="grid grid-cols-2 gap-4">
                 {goals.map(goal => (
                   <div key={goal.id} className="bg-white rounded-xl border border-slate-200 p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-slate-800">{goal.title}</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500">{goal.quarter}</span>
+                    <div className="flex items-center justify-between mb-3 min-w-0">
+                      <h3 className="font-semibold text-slate-800 truncate">{goal.title}</h3>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-slate-500 whitespace-nowrap">{goal.quarter}</span>
                         <button
                           onClick={() => {
                             if (confirm(`「${goal.title}」を削除しますか？`)) {
                               setGoals(goals.filter(g => g.id !== goal.id))
                             }
                           }}
-                          className="p-1 hover:bg-red-50 rounded text-red-500">
+                          className="p-1 hover:bg-red-50 rounded text-red-500 flex-shrink-0">
                           <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
@@ -1720,31 +1720,31 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
             <div className="space-y-6">
               <div className="grid grid-cols-4 gap-4">
                 <div className="bg-white rounded-xl border border-slate-200 p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center"><CheckCircle2 className="w-5 h-5 text-green-600" /></div>
-                    <span className="text-sm text-slate-600">完了率</span>
+                  <div className="flex items-center gap-3 mb-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0"><CheckCircle2 className="w-5 h-5 text-green-600" /></div>
+                    <span className="text-sm text-slate-600 truncate">完了率</span>
                   </div>
                   <p className="text-3xl font-bold text-slate-800">{tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%</p>
-                  <p className="text-xs text-slate-500 mt-1">{completedCount}/{tasks.length} タスク完了</p>
+                  <p className="text-xs text-slate-500 mt-1 truncate">{completedCount}/{tasks.length} タスク完了</p>
                 </div>
                 <div className="bg-white rounded-xl border border-slate-200 p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center"><Clock className="w-5 h-5 text-blue-600" /></div>
-                    <span className="text-sm text-slate-600">総作業時間</span>
+                  <div className="flex items-center gap-3 mb-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0"><Clock className="w-5 h-5 text-blue-600" /></div>
+                    <span className="text-sm text-slate-600 truncate">総作業時間</span>
                   </div>
                   <p className="text-3xl font-bold text-slate-800">{Math.floor(todayTotalMinutes / 60)}h {todayTotalMinutes % 60}m</p>
                 </div>
                 <div className="bg-white rounded-xl border border-slate-200 p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center"><Target className="w-5 h-5 text-purple-600" /></div>
-                    <span className="text-sm text-slate-600">目標達成度</span>
+                  <div className="flex items-center gap-3 mb-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0"><Target className="w-5 h-5 text-purple-600" /></div>
+                    <span className="text-sm text-slate-600 truncate">目標達成度</span>
                   </div>
                   <p className="text-3xl font-bold text-slate-800">{goals.length > 0 ? Math.round(goals.reduce((s, g) => s + g.progress, 0) / goals.length) : 0}%</p>
                 </div>
                 <div className="bg-white rounded-xl border border-slate-200 p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
-                    <span className="text-sm text-slate-600">期限超過</span>
+                  <div className="flex items-center gap-3 mb-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
+                    <span className="text-sm text-slate-600 truncate">期限超過</span>
                   </div>
                   <p className="text-3xl font-bold text-slate-800">{overdueCount}</p>
                 </div>
@@ -1758,12 +1758,12 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                       const done = tasks.filter(t => t.priority === p && t.status === 'completed').length
                       const rate = total > 0 ? Math.round((done / total) * 100) : 0
                       return (
-                        <div key={p} className="flex items-center gap-3">
-                          <span className={`w-16 text-sm ${p === 'high' ? 'text-red-600' : p === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>{priorityLabels[p]}</span>
+                        <div key={p} className="flex items-center gap-3 min-w-0">
+                          <span className={`w-16 text-sm flex-shrink-0 ${p === 'high' ? 'text-red-600' : p === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>{priorityLabels[p]}</span>
                           <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${p === 'high' ? 'bg-red-500' : p === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${rate}%` }} />
                           </div>
-                          <span className="text-sm text-slate-500">{done}/{total}</span>
+                          <span className="text-sm text-slate-500 flex-shrink-0 whitespace-nowrap">{done}/{total}</span>
                         </div>
                       )
                     })}
@@ -1777,12 +1777,12 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                       const projDone = projTasks.filter(t => t.status === 'completed').length
                       const rate = projTasks.length > 0 ? Math.round((projDone / projTasks.length) * 100) : 0
                       return (
-                        <div key={proj.id} className="flex items-center gap-3">
-                          <span className="w-24 text-sm text-slate-700 truncate">{proj.name}</span>
+                        <div key={proj.id} className="flex items-center gap-3 min-w-0">
+                          <span className="w-24 text-sm text-slate-700 truncate flex-shrink-0">{proj.name}</span>
                           <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                             <div className="h-full bg-blue-500 rounded-full" style={{ width: `${rate}%` }} />
                           </div>
-                          <span className="text-sm text-slate-500">{rate}%</span>
+                          <span className="text-sm text-slate-500 flex-shrink-0 whitespace-nowrap">{rate}%</span>
                         </div>
                       )
                     })}

@@ -212,7 +212,7 @@ export async function sendTaskNotification(
             type: 'plain_text',
             text: 'タスクを開く',
           },
-          url: `https://executy.app/tasks/${task.id}`,
+          url: `https://aide.app/tasks/${task.id}`,
         },
       ],
     },

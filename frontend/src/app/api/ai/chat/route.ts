@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Gemini API呼び出し
-    const systemPrompt = `あなたはEXECUTYというタスク管理アプリのAIアシスタントです。
+    const systemPrompt = `あなたはAideというタスク管理アプリのAIアシスタントです。
 ユーザーのタスク管理、時間管理、生産性向上をサポートします。
 
 できること：
@@ -82,7 +82,7 @@ ${context ? `現在のコンテキスト: ${JSON.stringify(context)}` : ''}
       body: JSON.stringify({
         contents: [
           { role: 'user', parts: [{ text: systemPrompt }] },
-          { role: 'model', parts: [{ text: 'はい、EXECUTYのAIアシスタントとしてお手伝いします。' }] },
+          { role: 'model', parts: [{ text: 'はい、AideのAIアシスタントとしてお手伝いします。' }] },
           { role: 'user', parts: [{ text: message }] }
         ],
         generationConfig: {

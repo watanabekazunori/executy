@@ -1,4 +1,4 @@
-// API Client for EXECUTY
+// API Client for Aide
 
 // Vercel統合構成: フロントエンドと同じドメインのAPI Routesを使用
 const API_BASE = '/api';

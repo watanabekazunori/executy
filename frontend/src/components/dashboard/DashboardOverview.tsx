@@ -124,12 +124,12 @@ export default function DashboardOverview() {
                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
               </div>
             </div>
-            <div className="mt-4">
+            <div className="mt-4 min-w-0">
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-slate-900">{stat.value}</span>
-                <span className="text-slate-500 text-sm">{stat.subValue}</span>
+                <span className="text-slate-500 text-sm truncate">{stat.subValue}</span>
               </div>
-              <p className="text-slate-500 text-sm mt-1">{stat.label}</p>
+              <p className="text-slate-500 text-sm mt-1 truncate">{stat.label}</p>
             </div>
           </div>
         ))}
@@ -142,8 +142,8 @@ export default function DashboardOverview() {
             key={action.id}
             className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 rounded-xl transition-colors border border-slate-200 shadow-sm"
           >
-            <action.icon className={`w-4 h-4 ${action.color}`} />
-            <span className="text-sm font-medium text-slate-700">{action.label}</span>
+            <action.icon className={`w-4 h-4 ${action.color} flex-shrink-0`} />
+            <span className="text-sm font-medium text-slate-700 truncate">{action.label}</span>
           </button>
         ))}
       </div>

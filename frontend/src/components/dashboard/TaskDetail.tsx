@@ -139,16 +139,16 @@ export default function TaskDetail({ task, isOpen, onClose, onUpdate }: TaskDeta
       >
         <div className="flex flex-col h-full">
           {/* ヘッダー */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-200">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between p-4 border-b border-slate-200 gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               {task.organization && (
-                <div className={`w-3 h-3 rounded-full ${orgColors[task.organization.color] || 'bg-slate-400'}`} />
+                <div className={`w-3 h-3 rounded-full flex-shrink-0 ${orgColors[task.organization.color] || 'bg-slate-400'}`} />
               )}
-              <span className="text-sm text-slate-500">{task.organization?.name || '組織'}</span>
+              <span className="text-sm text-slate-500 truncate">{task.organization?.name || '組織'}</span>
               {task.project && (
                 <>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm text-slate-500">{task.project.name}</span>
+                  <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="text-sm text-slate-500 truncate">{task.project.name}</span>
                 </>
               )}
             </div>
@@ -171,8 +171,8 @@ export default function TaskDetail({ task, isOpen, onClose, onUpdate }: TaskDeta
           {/* コンテンツ */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
             {/* タイトル */}
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">{task.title}</h2>
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2 break-words">{task.title}</h2>
               {task.description && (
                 <p className="text-slate-600 text-sm">{task.description}</p>
               )}
@@ -313,8 +313,8 @@ export default function TaskDetail({ task, isOpen, onClose, onUpdate }: TaskDeta
                         key={meeting.id}
                         className="p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm text-slate-900">{meeting.title}</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-sm text-slate-900 truncate min-w-0 flex-1">{meeting.title}</span>
                           <span className={`text-xs px-2 py-0.5 rounded ${
                             meeting.status === 'completed' ? 'bg-green-100 text-green-600' :
                             meeting.status === 'scheduled' ? 'bg-blue-100 text-blue-600' :
@@ -381,8 +381,8 @@ export default function TaskDetail({ task, isOpen, onClose, onUpdate }: TaskDeta
                             <FileText className="w-4 h-4 text-blue-500" />
                           )}
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-slate-700 group-hover:text-primary-600 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-700 group-hover:text-primary-600 transition-colors truncate">
                             {link.title}
                           </p>
                           <p className="text-xs text-slate-500">
@@ -429,8 +429,8 @@ export default function TaskDetail({ task, isOpen, onClose, onUpdate }: TaskDeta
           </div>
 
           {/* フッター */}
-          <div className="flex items-center justify-between p-4 border-t border-slate-200 bg-slate-50">
-            <div className="text-xs text-slate-500">
+          <div className="flex items-center justify-between p-4 border-t border-slate-200 bg-slate-50 gap-2">
+            <div className="text-xs text-slate-500 truncate min-w-0">
               作成: {formatDate(task.createdAt)}
             </div>
             <div className="flex items-center gap-2">

@@ -69,7 +69,7 @@ export default function AIChat() {
     {
       id: '1',
       role: 'assistant',
-      content: 'こんにちは！EXECUTYのAIアシスタントです。タスク管理、スケジュール調整、優先順位付けについてお手伝いします。何かお聞きになりたいことはありますか？',
+      content: 'こんにちは！AideのAIアシスタントです。タスク管理、スケジュール調整、優先順位付けについてお手伝いします。何かお聞きになりたいことはありますか？',
       timestamp: new Date(),
     },
   ]);
@@ -152,10 +152,10 @@ export default function AIChat() {
             key={action.id}
             onClick={() => handleQuickAction(action)}
             disabled={isLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs text-slate-600 whitespace-nowrap transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs text-slate-600 truncate transition-colors disabled:opacity-50"
           >
-            {action.icon}
-            {action.label}
+            <span className="flex-shrink-0">{action.icon}</span>
+            <span className="truncate">{action.label}</span>
           </button>
         ))}
       </div>
@@ -187,7 +187,7 @@ export default function AIChat() {
                   : 'bg-white text-slate-700 border border-slate-200'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
               <p className={`text-xs mt-1 ${message.role === 'user' ? 'opacity-70' : 'text-slate-400'}`}>
                 {message.timestamp.toLocaleTimeString('ja-JP', {
                   hour: '2-digit',
@@ -211,7 +211,7 @@ export default function AIChat() {
       </div>
 
       {/* 入力エリア */}
-      <div className="p-4 border-t border-slate-200 bg-white">
+      <div className="p-3 sm:p-4 border-t border-slate-200 bg-white">
         <div className="flex gap-2">
           <input
             type="text"

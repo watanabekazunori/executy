@@ -1,12 +1,12 @@
-// Database connection for Neon (Vercel Edge compatible)
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+// Database connection for Supabase (PostgreSQL)
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from './schema';
 
-// 環境変数からNeon接続文字列を取得
-const sql = neon(process.env.DATABASE_URL!);
+// 環境変数からSupabase接続文字列を取得
+const connectionString = process.env.DATABASE_URL!;
+const sql = postgres(connectionString, { prepare: false });
 
-// @ts-ignore - Neon type compatibility issue
 export const db = drizzle(sql, { schema });
 
 export * from './schema';

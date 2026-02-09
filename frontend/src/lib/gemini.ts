@@ -176,7 +176,7 @@ export async function chatWithAI(message: string, context?: { tasks?: any[]; mee
 ` : '';
 
     const prompt = `
-あなたはEXECUTYの経営者・マネージャー向けAIアシスタントです。
+あなたはAideのAIアシスタントです。
 タスク管理、スケジュール調整、優先順位付けについてサポートします。
 
 ${contextInfo}
