@@ -663,12 +663,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
   const getOrgById = (id: string) => organizations.find(o => o.id === id)
   const getProjectById = (id: string) => projects.find(p => p.id === id)
 
-  // ローディング・認証チェック
-  if (!mounted || status === 'loading') {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
-  }
-  if (status === 'unauthenticated') return null
-
+  // useMemoはearly returnより前に配置（Reactフック規則）
   const filteredTasks = useMemo(() => getFilteredTasks(), [tasks, selectedOrgId, orgFilter, taskFilter])
   const completedCount = useMemo(() => tasks.filter(t => t.status === 'completed').length, [tasks])
   const inProgressCount = useMemo(() => tasks.filter(t => t.status === 'in_progress').length, [tasks])
@@ -689,6 +684,12 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
     { id: 'health', name: 'メンタル・体調', icon: Heart },
     { id: 'settings', name: '設定', icon: Settings },
   ], [])
+
+  // ローディング・認証チェック（フックの後に配置）
+  if (!mounted || status === 'loading') {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+  }
+  if (status === 'unauthenticated') return null
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
