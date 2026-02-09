@@ -2369,20 +2369,28 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                     />
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         if (newProjectInline.trim()) {
-                          const colors = ['bg-blue-400', 'bg-green-400', 'bg-purple-400', 'bg-orange-400', 'bg-pink-400']
-                          const newProj: Project = {
-                            id: `proj-${Date.now()}`,
-                            name: newProjectInline.trim(),
-                            organizationId: newTaskOrgId,
-                            color: colors[projects.length % colors.length],
-                            status: 'active'
-                          }
-                          setProjects([...projects, newProj])
-                          setNewTaskProjectId(newProj.id)
-                          setNewProjectInline('')
-                          setShowInlineProjectInput(false)
+                          try {
+                            const colors = ['bg-blue-400', 'bg-green-400', 'bg-purple-400', 'bg-orange-400', 'bg-pink-400']
+                            const res = await fetch('/api/projects', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                name: newProjectInline.trim(),
+                                organizationId: newTaskOrgId,
+                                color: colors[projects.length % colors.length],
+                                status: 'active'
+                              })
+                            })
+                            if (res.ok) {
+                              const newProj = await res.json()
+                              setProjects(prev => [...prev, newProj])
+                              setNewTaskProjectId(newProj.id)
+                              setNewProjectInline('')
+                              setShowInlineProjectInput(false)
+                            }
+                          } catch (e) { console.error(e) }
                         }
                       }}
                       className="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm">
@@ -2522,21 +2530,29 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               <select value={newProjectOrgId} onChange={(e) => setNewProjectOrgId(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg">
                 {organizations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
-              <button onClick={() => {
+              <button onClick={async () => {
                 if (!newProjectName.trim()) return
-                const colors = ['bg-blue-400', 'bg-green-400', 'bg-purple-400', 'bg-orange-400', 'bg-pink-400']
-                const newProject: Project = {
-                  id: `proj-${Date.now()}`,
-                  name: newProjectName,
-                  organizationId: newProjectOrgId,
-                  color: colors[projects.length % colors.length],
-                  description: newProjectDesc,
-                  status: 'active'
-                }
-                setProjects([...projects, newProject])
-                setNewProjectOpen(false)
-                setNewProjectName('')
-                setNewProjectDesc('')
+                try {
+                  const colors = ['bg-blue-400', 'bg-green-400', 'bg-purple-400', 'bg-orange-400', 'bg-pink-400']
+                  const res = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name: newProjectName.trim(),
+                      organizationId: newProjectOrgId,
+                      color: colors[projects.length % colors.length],
+                      description: newProjectDesc,
+                      status: 'active'
+                    })
+                  })
+                  if (res.ok) {
+                    const newProject = await res.json()
+                    setProjects(prev => [...prev, newProject])
+                    setNewProjectOpen(false)
+                    setNewProjectName('')
+                    setNewProjectDesc('')
+                  }
+                } catch (e) { console.error(e) }
               }} className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">作成</button>
             </div>
           </div>
@@ -2601,8 +2617,8 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
       {/* AI分析モーダル（タスク作成後に表示） */}
       {aiAnalysisOpen && analyzingTask && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setAiAnalysisOpen(false); setAiAnalysisResult(null); setAnalyzingTask(null) }}>
-          <div className="bg-white rounded-2xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-purple-500" />
                 <h2 className="font-semibold text-slate-800">AI タスク分析</h2>
@@ -2612,7 +2628,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto">
               {aiAnalyzing ? (
                 <div className="text-center py-10">
                   <Loader2 className="w-10 h-10 animate-spin mx-auto text-purple-500 mb-4" />
@@ -2844,17 +2860,25 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               type="text"
               value={newOrgName}
               onChange={e => setNewOrgName(e.target.value)}
-              onKeyDown={e => {
+              onKeyDown={async e => {
                 if (e.key === 'Enter' && newOrgName.trim()) {
-                  const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500']
-                  const newOrg: Organization = {
-                    id: `org-${Date.now()}`,
-                    name: newOrgName.trim(),
-                    initial: newOrgName.trim().charAt(0).toUpperCase(),
-                    color: colors[organizations.length % colors.length]
-                  }
-                  setOrganizations(prev => [...prev, newOrg])
-                  setNewOrgDialogOpen(false)
+                  try {
+                    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500']
+                    const res = await fetch('/api/organizations', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        name: newOrgName.trim(),
+                        initial: newOrgName.trim().charAt(0).toUpperCase(),
+                        color: colors[organizations.length % colors.length]
+                      })
+                    })
+                    if (res.ok) {
+                      const newOrg = await res.json()
+                      setOrganizations(prev => [...prev, newOrg])
+                      setNewOrgDialogOpen(false)
+                    }
+                  } catch (err) { console.error(err) }
                 }
               }}
               placeholder="組織名を入力"
@@ -2864,17 +2888,25 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
             <div className="flex gap-3 justify-end">
               <button onClick={() => setNewOrgDialogOpen(false)} className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">キャンセル</button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (newOrgName.trim()) {
-                    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500']
-                    const newOrg: Organization = {
-                      id: `org-${Date.now()}`,
-                      name: newOrgName.trim(),
-                      initial: newOrgName.trim().charAt(0).toUpperCase(),
-                      color: colors[organizations.length % colors.length]
-                    }
-                    setOrganizations(prev => [...prev, newOrg])
-                    setNewOrgDialogOpen(false)
+                    try {
+                      const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500']
+                      const res = await fetch('/api/organizations', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          name: newOrgName.trim(),
+                          initial: newOrgName.trim().charAt(0).toUpperCase(),
+                          color: colors[organizations.length % colors.length]
+                        })
+                      })
+                      if (res.ok) {
+                        const newOrg = await res.json()
+                        setOrganizations(prev => [...prev, newOrg])
+                        setNewOrgDialogOpen(false)
+                      }
+                    } catch (err) { console.error(err) }
                   }
                 }}
                 disabled={!newOrgName.trim()}
