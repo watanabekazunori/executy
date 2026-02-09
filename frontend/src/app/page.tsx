@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import {
@@ -213,6 +213,22 @@ export default function Dashboard() {
   // カレンダービュー
   const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('week')
   const [calendarDate, setCalendarDate] = useState(new Date())
+
+  // 確認ダイアログ（prompt/confirmの代替）
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmMessage, setConfirmMessage] = useState('')
+  const confirmCallback = useRef<(() => void) | null>(null)
+  const showConfirm = (message: string, onConfirm: () => void) => {
+    setConfirmMessage(message)
+    confirmCallback.current = onConfirm
+    setConfirmOpen(true)
+  }
+  const handleConfirmOk = () => { confirmCallback.current?.(); setConfirmOpen(false) }
+  const handleConfirmCancel = () => { setConfirmOpen(false) }
+
+  // 新規組織ダイアログ（promptの代替）
+  const [newOrgDialogOpen, setNewOrgDialogOpen] = useState(false)
+  const [newOrgName, setNewOrgName] = useState('')
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -653,15 +669,15 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
   }
   if (status === 'unauthenticated') return null
 
-  const filteredTasks = getFilteredTasks()
-  const completedCount = tasks.filter(t => t.status === 'completed').length
-  const inProgressCount = tasks.filter(t => t.status === 'in_progress').length
-  const overdueCount = tasks.filter(t => t.dueDate && t.dueDate < new Date().toISOString().split('T')[0] && t.status !== 'completed').length
-  const todayTotalMinutes = timeEntries.reduce((s, e) => s + e.duration, 0)
-  const unreadNotifs = notifications.filter(n => !n.read).length
+  const filteredTasks = useMemo(() => getFilteredTasks(), [tasks, selectedOrgId, orgFilter, taskFilter])
+  const completedCount = useMemo(() => tasks.filter(t => t.status === 'completed').length, [tasks])
+  const inProgressCount = useMemo(() => tasks.filter(t => t.status === 'in_progress').length, [tasks])
+  const overdueCount = useMemo(() => tasks.filter(t => t.dueDate && t.dueDate < new Date().toISOString().split('T')[0] && t.status !== 'completed').length, [tasks])
+  const todayTotalMinutes = useMemo(() => timeEntries.reduce((s, e) => s + e.duration, 0), [timeEntries])
+  const unreadNotifs = useMemo(() => notifications.filter(n => !n.read).length, [notifications])
 
   // メニュー項目（AIを上に配置）
-  const menuItems = [
+  const menuItems = useMemo(() => [
     { id: 'ai', name: 'AI アシスタント', icon: Sparkles },
     { id: 'dashboard', name: 'ダッシュボード', icon: LayoutDashboard },
     { id: 'tasks', name: 'タスク', icon: ListTodo },
@@ -672,7 +688,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
     { id: 'analytics', name: '分析・レポート', icon: BarChart3 },
     { id: 'health', name: 'メンタル・体調', icon: Heart },
     { id: 'settings', name: '設定', icon: Settings },
-  ]
+  ], [])
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -1206,9 +1222,10 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              if (confirm('このタスクを削除しますか？')) {
-                                setTasks(tasks.filter(t => t.id !== task.id))
-                              }
+                              const taskId = task.id
+                              showConfirm('このタスクを削除しますか？', () => {
+                                setTasks(prev => prev.filter(t => t.id !== taskId))
+                              })
                             }}
                             className="p-1 text-red-500 hover:bg-red-50 rounded">
                             <Trash2 className="w-4 h-4" />
@@ -1270,9 +1287,10 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                         <span className="text-xs text-slate-500 whitespace-nowrap">{goal.quarter}</span>
                         <button
                           onClick={() => {
-                            if (confirm(`「${goal.title}」を削除しますか？`)) {
-                              setGoals(goals.filter(g => g.id !== goal.id))
-                            }
+                            const goalId = goal.id
+                            showConfirm(`「${goal.title}」を削除しますか？`, () => {
+                              setGoals(prev => prev.filter(g => g.id !== goalId))
+                            })
                           }}
                           className="p-1 hover:bg-red-50 rounded text-red-500 flex-shrink-0">
                           <Trash2 className="w-3 h-3" />
@@ -1834,19 +1852,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-slate-800">組織一覧</h3>
                         <button
-                          onClick={() => {
-                            const name = prompt('新しい組織名を入力してください')
-                            if (name) {
-                              const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500']
-                              const newOrg: Organization = {
-                                id: `org-${Date.now()}`,
-                                name,
-                                initial: name.charAt(0).toUpperCase(),
-                                color: colors[organizations.length % colors.length]
-                              }
-                              setOrganizations([...organizations, newOrg])
-                            }
-                          }}
+                          onClick={() => { setNewOrgName(''); setNewOrgDialogOpen(true) }}
                           className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">
                           <Plus className="w-4 h-4" />新規組織
                         </button>
@@ -1895,9 +1901,10 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                               </select>
                               <button
                                 onClick={() => {
-                                  if (confirm(`「${org.name}」を削除しますか？`)) {
-                                    setOrganizations(organizations.filter(o => o.id !== org.id))
-                                  }
+                                  const orgId = org.id
+                                  showConfirm(`「${org.name}」を削除しますか？`, () => {
+                                    setOrganizations(prev => prev.filter(o => o.id !== orgId))
+                                  })
                                 }}
                                 className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
                                 <Trash2 className="w-4 h-4" />
@@ -1961,9 +1968,10 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                                 </select>
                                 <button
                                   onClick={() => {
-                                    if (confirm(`「${project.name}」を削除しますか？`)) {
-                                      setProjects(projects.filter(p => p.id !== project.id))
-                                    }
+                                    const projId = project.id
+                                    showConfirm(`「${project.name}」を削除しますか？`, () => {
+                                      setProjects(prev => prev.filter(p => p.id !== projId))
+                                    })
                                   }}
                                   className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
                                   <Trash2 className="w-4 h-4" />
@@ -2484,11 +2492,12 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                 </button>
                 <button
                   onClick={() => {
-                    if (confirm(`「${selectedProject.name}」を削除しますか？関連するタスクも削除されます。`)) {
-                      setProjects(projects.filter(p => p.id !== selectedProject.id))
-                      setTasks(tasks.filter(t => t.projectId !== selectedProject.id))
+                    const projId = selectedProject.id
+                    showConfirm(`「${selectedProject.name}」を削除しますか？関連するタスクも削除されます。`, () => {
+                      setProjects(prev => prev.filter(p => p.id !== projId))
+                      setTasks(prev => prev.filter(t => t.projectId !== projId))
                       setProjectDetailOpen(false)
-                    }
+                    })
                   }}
                   className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50">
                   <Trash2 className="w-4 h-4 inline mr-1" />削除
@@ -2809,6 +2818,69 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 確認ダイアログ（confirm()の代替） */}
+      {confirmOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" onClick={handleConfirmCancel}>
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
+            <p className="text-slate-800 mb-6">{confirmMessage}</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={handleConfirmCancel} className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">キャンセル</button>
+              <button onClick={handleConfirmOk} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">削除</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 新規組織ダイアログ（prompt()の代替） */}
+      {newOrgDialogOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" onClick={() => setNewOrgDialogOpen(false)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-slate-800 mb-4">新しい組織を作成</h3>
+            <input
+              type="text"
+              value={newOrgName}
+              onChange={e => setNewOrgName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && newOrgName.trim()) {
+                  const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500']
+                  const newOrg: Organization = {
+                    id: `org-${Date.now()}`,
+                    name: newOrgName.trim(),
+                    initial: newOrgName.trim().charAt(0).toUpperCase(),
+                    color: colors[organizations.length % colors.length]
+                  }
+                  setOrganizations(prev => [...prev, newOrg])
+                  setNewOrgDialogOpen(false)
+                }
+              }}
+              placeholder="組織名を入力"
+              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setNewOrgDialogOpen(false)} className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">キャンセル</button>
+              <button
+                onClick={() => {
+                  if (newOrgName.trim()) {
+                    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500']
+                    const newOrg: Organization = {
+                      id: `org-${Date.now()}`,
+                      name: newOrgName.trim(),
+                      initial: newOrgName.trim().charAt(0).toUpperCase(),
+                      color: colors[organizations.length % colors.length]
+                    }
+                    setOrganizations(prev => [...prev, newOrg])
+                    setNewOrgDialogOpen(false)
+                  }
+                }}
+                disabled={!newOrgName.trim()}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                作成
+              </button>
             </div>
           </div>
         </div>
