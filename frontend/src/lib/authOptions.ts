@@ -4,9 +4,37 @@ import GoogleProvider from 'next-auth/providers/google';
 // 許可するメールドメイン（環境変数で設定可能）
 const ALLOWED_DOMAINS = (process.env.ALLOWED_EMAIL_DOMAINS || 'fanvest.co.jp').split(',').map(d => d.trim());
 
+// Googleアクセストークンのリフレッシュ
+async function refreshAccessToken(token: any) {
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        grant_type: 'refresh_token',
+        refresh_token: token.refreshToken as string,
+      }),
+    });
+
+    const tokens = await response.json();
+    if (!response.ok) throw tokens;
+
+    return {
+      ...token,
+      accessToken: tokens.access_token,
+      accessTokenExpires: Date.now() + tokens.expires_in * 1000,
+      refreshToken: tokens.refresh_token ?? token.refreshToken,
+    };
+  } catch (error) {
+    console.error('Error refreshing access token:', error);
+    return { ...token, error: 'RefreshAccessTokenError' };
+  }
+}
+
 export const authOptions: AuthOptions = {
   providers: [
-    // Google認証（Calendar, Gmail, Profileスコープ付き）
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
@@ -33,7 +61,6 @@ export const authOptions: AuthOptions = {
     error: '/login',
   },
   callbacks: {
-    // サインイン時にドメインチェック
     async signIn({ account, profile }) {
       if (account?.provider === 'google') {
         const email = profile?.email || '';
@@ -45,17 +72,25 @@ export const authOptions: AuthOptions = {
       return true;
     },
     async jwt({ token, user, account }) {
-      if (user) {
-        token.id = user.id;
-      }
-      // Google認証時にアクセストークンとリフレッシュトークンを保存
+      // 初回ログイン時
       if (account) {
-        token.accessToken = account.access_token;
-        token.refreshToken = account.refresh_token;
-        token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : 0;
-        token.provider = account.provider;
+        return {
+          ...token,
+          id: user?.id,
+          accessToken: account.access_token,
+          refreshToken: account.refresh_token,
+          accessTokenExpires: account.expires_at ? account.expires_at * 1000 : 0,
+          provider: account.provider,
+        };
       }
-      return token;
+
+      // トークンがまだ有効な場合はそのまま返す
+      if (Date.now() < (token.accessTokenExpires as number)) {
+        return token;
+      }
+
+      // トークンが期限切れの場合はリフレッシュ
+      return refreshAccessToken(token);
     },
     async session({ session, token }) {
       if (session.user) {

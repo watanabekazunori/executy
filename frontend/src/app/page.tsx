@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ListTodo, FolderKanban, Target, Clock, Calendar, BarChart3,
   Sparkles, Bell, Plus, ChevronDown, Building2, CheckCircle2,
   AlertTriangle, TrendingUp, MoreHorizontal, X, Play, Pause, Trash2, Edit3, Save,
-  Zap, MessageSquare, Link as LinkIcon, User, LogOut, Square, Coffee, Heart, Brain,
+  Zap, MessageSquare, Link as LinkIcon, User, LogOut,
   FileText, ExternalLink, ArrowRight, RefreshCw, Send, Loader2, ChevronRight, Settings,
   ChevronLeft, Mail, Link2, Shield
 } from 'lucide-react'
@@ -24,9 +24,7 @@ interface Task {
   comments?: Comment[]
 }
 interface Comment { id: string; content: string; createdAt: string; author: string }
-interface Goal { id: string; title: string; progress: number; targetValue: number; currentValue: number; unit: string; quarter: string }
 interface TimeEntry { id: string; taskId: string; taskTitle: string; startTime: string; endTime?: string; duration: number }
-interface Notification { id: string; type: string; message: string; createdAt: string; read: boolean; taskId?: string }
 interface ChatMessage { id: string; role: 'user' | 'assistant'; content: string }
 interface Meeting { id: string; title: string; startTime: string; endTime: string; organizationId: string }
 
@@ -124,11 +122,6 @@ export default function Dashboard() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   // 目標
-  const [goals, setGoals] = useState<Goal[]>([])
-  const [newGoalOpen, setNewGoalOpen] = useState(false)
-  const [newGoalTitle, setNewGoalTitle] = useState('')
-  const [newGoalTarget, setNewGoalTarget] = useState('')
-  const [newGoalUnit, setNewGoalUnit] = useState('')
 
   // プロジェクト
   const [newProjectOpen, setNewProjectOpen] = useState(false)
@@ -139,14 +132,8 @@ export default function Dashboard() {
   const [projectDetailOpen, setProjectDetailOpen] = useState(false)
 
   // 通知
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [notifOpen, setNotifOpen] = useState(false)
 
   // メンタル・体調
-  const [healthLogs, setHealthLogs] = useState<{ date: string; mood: number; energy: number; note: string }[]>([])
-  const [todayMood, setTodayMood] = useState(3)
-  const [todayEnergy, setTodayEnergy] = useState(3)
-  const [healthNote, setHealthNote] = useState('')
 
   // 週間レビュー
   const [weeklyReviewOpen, setWeeklyReviewOpen] = useState(false)
@@ -226,11 +213,37 @@ export default function Dashboard() {
   const handleConfirmOk = () => { confirmCallback.current?.(); setConfirmOpen(false) }
   const handleConfirmCancel = () => { setConfirmOpen(false) }
 
+  // トースト通知
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
   // 新規組織ダイアログ（promptの代替）
   const [newOrgDialogOpen, setNewOrgDialogOpen] = useState(false)
   const [newOrgName, setNewOrgName] = useState('')
 
   useEffect(() => { setMounted(true) }, [])
+
+  // タイムエントリーをlocalStorageから復元
+  useEffect(() => {
+    if (mounted) {
+      try {
+        const saved = localStorage.getItem('aide-time-entries')
+        if (saved) setTimeEntries(JSON.parse(saved))
+      } catch (e) { console.error(e) }
+    }
+  }, [mounted])
+
+  // タイムエントリーをlocalStorageに保存
+  useEffect(() => {
+    if (mounted && timeEntries.length > 0) {
+      try {
+        localStorage.setItem('aide-time-entries', JSON.stringify(timeEntries))
+      } catch (e) { console.error(e) }
+    }
+  }, [timeEntries, mounted])
 
   useEffect(() => {
     if (status === 'unauthenticated') { router.push('/login') }
@@ -268,9 +281,9 @@ export default function Dashboard() {
       if (orgs.length > 0 && !selectedOrgId) setSelectedOrgId(orgs[0].id)
       if (orgs.length > 0) setNewTaskOrgId(orgs[0].id)
       if (orgs.length > 0) setNewProjectOrgId(orgs[0].id)
-      // 目標と通知は空で初期化（モックデータなし）
-      setGoals([])
-      setNotifications([])
+      // カレンダーイベントも自動ロード
+      loadCalendarEvents()
+      // 目標と通知は空で初期化（モックデータなし） - 削除済み
     } catch (e) { console.error(e) }
     setLoading(false)
   }
@@ -393,7 +406,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
       }
     } catch (e) { console.error(e) }
     setAdviceLoading(false)
-  }, [tasks, goals])
+  }, [tasks])
 
   // タスク読み込み時にアドバイスも取得
   useEffect(() => {
@@ -612,7 +625,7 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: inputText,
-          context: { tasks: tasks.slice(0, 5), goals: goals.slice(0, 3) }
+          context: { tasks: tasks.slice(0, 5) }
         })
       })
       if (res.ok) {
@@ -636,12 +649,6 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
     setAiLoading(false)
   }
 
-  // 体調記録
-  const saveHealthLog = () => {
-    const today = new Date().toISOString().split('T')[0]
-    setHealthLogs(prev => [...prev.filter(l => l.date !== today), { date: today, mood: todayMood, energy: todayEnergy, note: healthNote }])
-    setHealthNote('')
-  }
 
   // フィルタ済みタスク
   const getFilteredTasks = () => {
@@ -669,7 +676,6 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
   const inProgressCount = useMemo(() => tasks.filter(t => t.status === 'in_progress').length, [tasks])
   const overdueCount = useMemo(() => tasks.filter(t => t.dueDate && t.dueDate < new Date().toISOString().split('T')[0] && t.status !== 'completed').length, [tasks])
   const todayTotalMinutes = useMemo(() => timeEntries.reduce((s, e) => s + e.duration, 0), [timeEntries])
-  const unreadNotifs = useMemo(() => notifications.filter(n => !n.read).length, [notifications])
 
   // メニュー項目（AIを上に配置）
   const menuItems = useMemo(() => [
@@ -678,10 +684,8 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
     { id: 'tasks', name: 'タスク', icon: ListTodo },
     { id: 'projects', name: 'プロジェクト', icon: FolderKanban },
     { id: 'calendar', name: 'カレンダー', icon: Calendar },
-    { id: 'goals', name: '四半期目標', icon: Target },
     { id: 'timetrack', name: 'タイムトラック', icon: Clock },
     { id: 'analytics', name: '分析・レポート', icon: BarChart3 },
-    { id: 'health', name: 'メンタル・体調', icon: Heart },
     { id: 'settings', name: '設定', icon: Settings },
   ], [])
 
@@ -788,29 +792,6 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
               <h1 className="text-lg lg:text-xl font-bold text-slate-800">{menuItems.find(m => m.id === activeMenu)?.name || 'ダッシュボード'}</h1>
             </div>
             <div className="flex items-center gap-1 sm:gap-3">
-              {/* 通知 */}
-              <div className="relative">
-                <button onClick={() => setNotifOpen(!notifOpen)} className="p-2 rounded-lg hover:bg-slate-100 relative">
-                  <Bell className="w-5 h-5 text-slate-600" />
-                  {unreadNotifs > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />}
-                </button>
-                {notifOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white border border-slate-200 rounded-xl shadow-lg z-50">
-                    <div className="p-3 border-b border-slate-100"><span className="font-medium text-slate-800">通知</span></div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {notifications.map(n => (
-                        <div key={n.id} className={`p-3 border-b border-slate-50 ${n.read ? '' : 'bg-blue-50'}`}>
-                          <p className="text-sm text-slate-700">{n.message}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              {/* 週間レビュー - モバイル非表示 */}
-              <button onClick={() => setWeeklyReviewOpen(true)} className="hidden sm:flex px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200">
-                <RefreshCw className="w-4 h-4 inline mr-1" /> 週間レビュー
-              </button>
               {/* AIアシスタント */}
               <button onClick={() => setActiveMenu('ai')} className="flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg text-sm font-medium hover:from-purple-600 hover:to-blue-600">
                 <Sparkles className="w-4 h-4" /> <span className="hidden sm:inline">AI</span>
@@ -1272,90 +1253,6 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
           )}
 
           {/* 目標 */}
-          {activeMenu === 'goals' && (
-            <div>
-              <div className="flex justify-end mb-4">
-                <button onClick={() => setNewGoalOpen(true)} className="flex items-center gap-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                  <Plus className="w-4 h-4" /> 新規目標
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {goals.map(goal => (
-                  <div key={goal.id} className="bg-white rounded-xl border border-slate-200 p-5">
-                    <div className="flex items-center justify-between mb-3 min-w-0">
-                      <h3 className="font-semibold text-slate-800 truncate">{goal.title}</h3>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs text-slate-500 whitespace-nowrap">{goal.quarter}</span>
-                        <button
-                          onClick={() => {
-                            const goalId = goal.id
-                            showConfirm(`「${goal.title}」を削除しますか？`, () => {
-                              setGoals(prev => prev.filter(g => g.id !== goalId))
-                            })
-                          }}
-                          className="p-1 hover:bg-red-50 rounded text-red-500 flex-shrink-0">
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mb-3">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-slate-600">{goal.currentValue} / {goal.targetValue} {goal.unit}</span>
-                        <span className="font-medium text-blue-600">{goal.progress}%</span>
-                      </div>
-                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all" style={{ width: `${goal.progress}%` }} />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        placeholder="進捗値"
-                        className="flex-1 px-2 py-1 text-sm border border-slate-200 rounded"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const input = e.target as HTMLInputElement
-                            const newValue = parseFloat(input.value)
-                            if (!isNaN(newValue)) {
-                              setGoals(goals.map(g =>
-                                g.id === goal.id
-                                  ? { ...g, currentValue: newValue, progress: Math.min(100, Math.round((newValue / g.targetValue) * 100)) }
-                                  : g
-                              ))
-                              input.value = ''
-                            }
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={(e) => {
-                          const input = (e.target as HTMLElement).previousSibling as HTMLInputElement
-                          const newValue = parseFloat(input.value)
-                          if (!isNaN(newValue)) {
-                            setGoals(goals.map(g =>
-                              g.id === goal.id
-                                ? { ...g, currentValue: newValue, progress: Math.min(100, Math.round((newValue / g.targetValue) * 100)) }
-                                : g
-                            ))
-                            input.value = ''
-                          }
-                        }}
-                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
-                        更新
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {goals.length === 0 && (
-                  <div className="col-span-2 text-center py-10 text-slate-500">
-                    目標がありません。「新規目標」ボタンから作成してください。
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* タイムトラック */}
           {activeMenu === 'timetrack' && (
             <div className="space-y-4">
               {activeTimer && (
@@ -1427,53 +1324,6 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
           )}
 
           {/* メンタル・体調 */}
-          {activeMenu === 'health' && (
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-white rounded-xl border border-slate-200 p-5">
-                <h2 className="font-semibold text-slate-800 mb-4">今日の体調を記録</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-slate-600 mb-2">気分 (1-5)</label>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map(n => (
-                        <button key={n} onClick={() => setTodayMood(n)} className={`w-10 h-10 rounded-lg ${todayMood === n ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600'}`}>{n}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-slate-600 mb-2">エネルギー (1-5)</label>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map(n => (
-                        <button key={n} onClick={() => setTodayEnergy(n)} className={`w-10 h-10 rounded-lg ${todayEnergy === n ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-600'}`}>{n}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-slate-600 mb-2">メモ</label>
-                    <textarea value={healthNote} onChange={(e) => setHealthNote(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg" rows={3} />
-                  </div>
-                  <button onClick={saveHealthLog} className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">記録する</button>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl border border-slate-200 p-5">
-                <h2 className="font-semibold text-slate-800 mb-4">記録履歴</h2>
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {healthLogs.map((log, i) => (
-                    <div key={i} className="p-3 bg-slate-50 rounded-lg">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium text-slate-700">{log.date}</span>
-                        <span>気分: {log.mood} / エネルギー: {log.energy}</span>
-                      </div>
-                      {log.note && <p className="text-sm text-slate-600">{log.note}</p>}
-                    </div>
-                  ))}
-                  {healthLogs.length === 0 && <p className="text-slate-500 text-center py-4">まだ記録がありません</p>}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* カレンダー（Googleカレンダー風UI） */}
           {activeMenu === 'calendar' && (() => {
             // カレンダーヘルパー関数
             const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -1756,9 +1606,9 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                 <div className="bg-white rounded-xl border border-slate-200 p-5">
                   <div className="flex items-center gap-3 mb-3 min-w-0">
                     <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0"><Target className="w-5 h-5 text-purple-600" /></div>
-                    <span className="text-sm text-slate-600 truncate">目標達成度</span>
+                    <span className="text-sm text-slate-600 truncate">完了率</span>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">{goals.length > 0 ? Math.round(goals.reduce((s, g) => s + g.progress, 0) / goals.length) : 0}%</p>
+                  <p className="text-3xl font-bold text-slate-800">{tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%</p>
                 </div>
                 <div className="bg-white rounded-xl border border-slate-200 p-5">
                   <div className="flex items-center gap-3 mb-3 min-w-0">
@@ -1870,9 +1720,17 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                                   type="text"
                                   value={org.name}
                                   onChange={(e) => {
-                                    setOrganizations(organizations.map(o =>
-                                      o.id === org.id ? { ...o, name: e.target.value, initial: e.target.value.charAt(0).toUpperCase() } : o
+                                    const newName = e.target.value
+                                    setOrganizations(prev => prev.map(o =>
+                                      o.id === org.id ? { ...o, name: newName, initial: newName.charAt(0).toUpperCase() } : o
                                     ))
+                                  }}
+                                  onBlur={(e) => {
+                                    fetch(`/api/organizations/${org.id}`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ name: e.target.value, initial: e.target.value.charAt(0).toUpperCase() })
+                                    }).catch(console.error)
                                   }}
                                   className="font-medium text-slate-800 bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
                                 />
@@ -1886,9 +1744,15 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                               <select
                                 value={org.color}
                                 onChange={(e) => {
-                                  setOrganizations(organizations.map(o =>
-                                    o.id === org.id ? { ...o, color: e.target.value } : o
+                                  const newColor = e.target.value
+                                  setOrganizations(prev => prev.map(o =>
+                                    o.id === org.id ? { ...o, color: newColor } : o
                                   ))
+                                  fetch(`/api/organizations/${org.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ color: newColor })
+                                  }).catch(console.error)
                                 }}
                                 className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm">
                                 <option value="bg-blue-500">青</option>
@@ -1943,10 +1807,18 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                                     type="text"
                                     value={project.name}
                                     onChange={(e) => {
-                                      setProjects(projects.map(p =>
-                                        p.id === project.id ? { ...p, name: e.target.value } : p
-                                      ))
-                                    }}
+                                    const newName = e.target.value
+                                    setProjects(prev => prev.map(p =>
+                                      p.id === project.id ? { ...p, name: newName } : p
+                                    ))
+                                  }}
+                                  onBlur={(e) => {
+                                    fetch(`/api/projects/${project.id}`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ name: e.target.value })
+                                    }).catch(console.error)
+                                  }}
                                     className="font-medium text-slate-800 bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
                                   />
                                   <p className="text-sm text-slate-500">
@@ -1958,10 +1830,16 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                                 <select
                                   value={project.organizationId}
                                   onChange={(e) => {
-                                    setProjects(projects.map(p =>
-                                      p.id === project.id ? { ...p, organizationId: e.target.value } : p
-                                    ))
-                                  }}
+                                  const newOrgId = e.target.value
+                                  setProjects(prev => prev.map(p =>
+                                    p.id === project.id ? { ...p, organizationId: newOrgId } : p
+                                  ))
+                                  fetch(`/api/projects/${project.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ organizationId: newOrgId })
+                                  }).catch(console.error)
+                                }}
                                   className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm">
                                   {organizations.map(o => (
                                     <option key={o.id} value={o.id}>{o.name}</option>
@@ -2561,119 +2439,6 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
       )}
 
       {/* 新規目標モーダル */}
-      {newGoalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setNewGoalOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-slate-800">新規目標</h2>
-              <button onClick={() => setNewGoalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
-            </div>
-            <div className="p-6 space-y-4">
-              <input type="text" value={newGoalTitle} onChange={(e) => setNewGoalTitle(e.target.value)} placeholder="目標名..." className="w-full px-3 py-2 border border-slate-200 rounded-lg" />
-              <input type="number" value={newGoalTarget} onChange={(e) => setNewGoalTarget(e.target.value)} placeholder="目標値" className="w-full px-3 py-2 border border-slate-200 rounded-lg" />
-              <input type="text" value={newGoalUnit} onChange={(e) => setNewGoalUnit(e.target.value)} placeholder="単位（件、万円など）" className="w-full px-3 py-2 border border-slate-200 rounded-lg" />
-              <select id="goalQuarter" className="w-full px-3 py-2 border border-slate-200 rounded-lg" defaultValue={`Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`}>
-                <option value={`Q1 ${new Date().getFullYear()}`}>Q1 {new Date().getFullYear()}</option>
-                <option value={`Q2 ${new Date().getFullYear()}`}>Q2 {new Date().getFullYear()}</option>
-                <option value={`Q3 ${new Date().getFullYear()}`}>Q3 {new Date().getFullYear()}</option>
-                <option value={`Q4 ${new Date().getFullYear()}`}>Q4 {new Date().getFullYear()}</option>
-              </select>
-              <button onClick={() => {
-                const quarter = (document.getElementById('goalQuarter') as HTMLSelectElement)?.value || `Q1 ${new Date().getFullYear()}`
-                setGoals(prev => [...prev, { id: Date.now().toString(), title: newGoalTitle, progress: 0, targetValue: parseInt(newGoalTarget) || 0, currentValue: 0, unit: newGoalUnit, quarter }])
-                setNewGoalOpen(false); setNewGoalTitle(''); setNewGoalTarget(''); setNewGoalUnit('')
-              }} className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">作成</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 週間レビューモーダル */}
-      {weeklyReviewOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setWeeklyReviewOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-slate-800">週間レビュー</h2>
-              <button onClick={() => setWeeklyReviewOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div>
-                <h3 className="font-medium text-slate-700 mb-2">今週の成果</h3>
-                <p className="text-slate-600">完了タスク: {completedCount}件 / 作業時間: {Math.floor(todayTotalMinutes / 60)}時間</p>
-              </div>
-              <div>
-                <label className="block text-sm text-slate-600 mb-1">振り返り</label>
-                <textarea value={weekReflection} onChange={(e) => setWeekReflection(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg" rows={3} placeholder="今週うまくいったこと、改善点..." />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-600 mb-1">来週のフォーカス</label>
-                <textarea value={nextWeekFocus} onChange={(e) => setNextWeekFocus(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg" rows={3} placeholder="来週集中すること..." />
-              </div>
-              <button onClick={() => setWeeklyReviewOpen(false)} className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">保存して閉じる</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* AI分析モーダル（タスク作成後に表示） */}
-      {aiAnalysisOpen && analyzingTask && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setAiAnalysisOpen(false); setAiAnalysisResult(null); setAnalyzingTask(null) }}>
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-500" />
-                <h2 className="font-semibold text-slate-800">AI タスク分析</h2>
-              </div>
-              <button onClick={() => { setAiAnalysisOpen(false); setAiAnalysisResult(null); setAnalyzingTask(null) }} className="p-2 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto">
-              {aiAnalyzing ? (
-                <div className="text-center py-10">
-                  <Loader2 className="w-10 h-10 animate-spin mx-auto text-purple-500 mb-4" />
-                  <p className="text-slate-600">「{analyzingTask.title}」を分析中...</p>
-                  <p className="text-sm text-slate-500 mt-2">所要時間とサブタスクを提案します</p>
-                </div>
-              ) : aiAnalysisResult ? (
-                <div className="space-y-6">
-                  {/* タスク名 */}
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-sm text-slate-500">対象タスク</p>
-                    <p className="font-medium text-slate-800">{analyzingTask.title}</p>
-                  </div>
-
-                  {/* 見積もり時間 */}
-                  <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-xl">
-                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                      <Clock className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-blue-600">予想所要時間</p>
-                      <p className="text-2xl font-bold text-blue-800">
-                        {Math.floor(aiAnalysisResult.estimatedMinutes / 60)}時間 {aiAnalysisResult.estimatedMinutes % 60}分
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* サブタスク提案 */}
-                  <div>
-                    <h3 className="font-medium text-slate-700 mb-3">推奨サブタスク</h3>
-                    <div className="space-y-2">
-                      {aiAnalysisResult.subtasks.map((st, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 text-xs flex items-center justify-center">{i + 1}</span>
-                            <span className="text-slate-700">{st.title}</span>
-                          </div>
-                          {st.canAutomate && (
-                            <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs flex items-center gap-1">
-                              <Sparkles className="w-3 h-3" /> AI実行可能
-                            </span>
-                          )}
-                        </div>
-                      ))}
                     </div>
                   </div>
 
@@ -2839,6 +2604,13 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
           </div>
         </div>
       )}
+      {/* トースト通知 */}
+      {toast && (
+        <div className={`fixed bottom-4 right-4 z-[200] px-4 py-3 rounded-lg shadow-lg text-white text-sm transition-all ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
+          {toast.message}
+        </div>
+      )}
+
       {/* 確認ダイアログ（confirm()の代替） */}
       {confirmOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4" onClick={handleConfirmCancel}>

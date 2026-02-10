@@ -1,43 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, organizations } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 
-// GET: 組織詳細取得
+// GET: 組織詳細取得（所有者チェック付き）
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  try {
-    const result = await db.query.organizations.findFirst({
-      where: eq(organizations.id, params.id),
-      with: {
-        projects: true,
-        members: true,
-      },
-    });
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    if (!result) {
+  try {
+    const result = await db
+      .select()
+      .from(organizations)
+      .where(and(eq(organizations.id, params.id), eq(organizations.ownerEmail, session.user.email)));
+
+    if (result.length === 0) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json(result[0]);
   } catch (error) {
     console.error('Error fetching organization:', error);
     return NextResponse.json({ error: 'Failed to fetch organization' }, { status: 500 });
   }
 }
 
-// PATCH: 組織更新
+// PATCH: 組織更新（所有者チェック付き）
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const data = await request.json();
     const result = await db
       .update(organizations)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(organizations.id, params.id))
+      .where(and(eq(organizations.id, params.id), eq(organizations.ownerEmail, session.user.email)))
       .returning();
 
     if (result.length === 0) {
@@ -51,15 +60,20 @@ export async function PATCH(
   }
 }
 
-// DELETE: 組織削除
+// DELETE: 組織削除（所有者チェック付き）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const result = await db
       .delete(organizations)
-      .where(eq(organizations.id, params.id))
+      .where(and(eq(organizations.id, params.id), eq(organizations.ownerEmail, session.user.email)))
       .returning();
 
     if (result.length === 0) {
