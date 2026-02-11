@@ -51,8 +51,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const data = await request.json();
+
+    // フィールドホワイトリスト
     const result = await db.insert(meetings).values({
-      ...data,
+      title: data.title,
+      description: data.description || undefined,
+      organizationId: data.organizationId,
+      taskId: data.taskId || undefined,
+      location: data.location || undefined,
+      meetingUrl: data.meetingUrl || undefined,
+      status: data.status || 'scheduled',
       startTime: new Date(data.startTime),
       endTime: new Date(data.endTime),
     }).returning();

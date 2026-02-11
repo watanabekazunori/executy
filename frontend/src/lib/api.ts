@@ -1,10 +1,7 @@
 // API Client for Aide
+// 型定義のエクスポート（コンポーネントから参照される場合用）
 
-// Vercel統合構成: フロントエンドと同じドメインのAPI Routesを使用
 const API_BASE = '/api';
-
-// モックデータを使用するかどうか（バックエンド未起動時はtrue）
-const USE_MOCK = false;
 
 // 汎用フェッチ関数
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -100,36 +97,10 @@ export interface SharedLink {
   permission: 'view' | 'edit';
 }
 
-// ==================== モックデータ（空） ====================
-
-const mockOrganizations: Organization[] = [];
-
-const mockProjects: Project[] = [];
-
-const mockTasks: Task[] = [];
-
-const mockMeetings: Meeting[] = [];
-
-// ==================== API関数（モック対応） ====================
-
-// 組織
+// API関数
 export const organizationsAPI = {
-  getAll: async (): Promise<Organization[]> => {
-    if (USE_MOCK) {
-      await delay(300);
-      return mockOrganizations;
-    }
-    return fetchAPI<Organization[]>('/organizations');
-  },
-  getById: async (id: string): Promise<Organization> => {
-    if (USE_MOCK) {
-      await delay(200);
-      const org = mockOrganizations.find(o => o.id === id);
-      if (!org) throw new Error('Organization not found');
-      return org;
-    }
-    return fetchAPI<Organization>(`/organizations/${id}`);
-  },
+  getAll: () => fetchAPI<Organization[]>('/organizations'),
+  getById: (id: string) => fetchAPI<Organization>(`/organizations/${id}`),
   create: (data: Partial<Organization>) =>
     fetchAPI<Organization>('/organizations', {
       method: 'POST',
@@ -144,28 +115,12 @@ export const organizationsAPI = {
     fetchAPI(`/organizations/${id}`, { method: 'DELETE' }),
 };
 
-// プロジェクト
 export const projectsAPI = {
-  getAll: async (organizationId?: string): Promise<Project[]> => {
-    if (USE_MOCK) {
-      await delay(200);
-      if (organizationId) {
-        return mockProjects.filter(p => p.organizationId === organizationId);
-      }
-      return mockProjects;
-    }
+  getAll: (organizationId?: string) => {
     const query = organizationId ? `?organizationId=${organizationId}` : '';
     return fetchAPI<Project[]>(`/projects${query}`);
   },
-  getById: async (id: string): Promise<Project> => {
-    if (USE_MOCK) {
-      await delay(200);
-      const project = mockProjects.find(p => p.id === id);
-      if (!project) throw new Error('Project not found');
-      return project;
-    }
-    return fetchAPI<Project>(`/projects/${id}`);
-  },
+  getById: (id: string) => fetchAPI<Project>(`/projects/${id}`),
   create: (data: Partial<Project>) =>
     fetchAPI<Project>('/projects', {
       method: 'POST',
@@ -180,20 +135,8 @@ export const projectsAPI = {
     fetchAPI(`/projects/${id}`, { method: 'DELETE' }),
 };
 
-// タスク
 export const tasksAPI = {
-  getAll: async (params?: { organizationId?: string; projectId?: string; parentOnly?: boolean }): Promise<Task[]> => {
-    if (USE_MOCK) {
-      await delay(400);
-      let result = mockTasks.filter(t => !t.parentTaskId);
-      if (params?.organizationId) {
-        result = result.filter(t => t.organizationId === params.organizationId);
-      }
-      if (params?.projectId) {
-        result = result.filter(t => t.projectId === params.projectId);
-      }
-      return result;
-    }
+  getAll: (params?: { organizationId?: string; projectId?: string; parentOnly?: boolean }) => {
     const searchParams = new URLSearchParams();
     if (params?.organizationId) searchParams.set('organizationId', params.organizationId);
     if (params?.projectId) searchParams.set('projectId', params.projectId);
@@ -201,43 +144,20 @@ export const tasksAPI = {
     const query = searchParams.toString() ? `?${searchParams}` : '';
     return fetchAPI<Task[]>(`/tasks${query}`);
   },
-  getById: async (id: string): Promise<Task> => {
-    if (USE_MOCK) {
-      await delay(300);
-      const task = mockTasks.find(t => t.id === id);
-      if (!task) throw new Error('Task not found');
-      return task;
-    }
-    return fetchAPI<Task>(`/tasks/${id}`);
-  },
+  getById: (id: string) => fetchAPI<Task>(`/tasks/${id}`),
   create: (data: Partial<Task>) =>
     fetchAPI<Task>('/tasks', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  update: async (id: string, data: Partial<Task>): Promise<Task> => {
-    if (USE_MOCK) {
-      await delay(300);
-      const idx = mockTasks.findIndex(t => t.id === id);
-      if (idx === -1) throw new Error('Task not found');
-      mockTasks[idx] = { ...mockTasks[idx], ...data, updatedAt: new Date().toISOString() };
-      return mockTasks[idx];
-    }
-    return fetchAPI<Task>(`/tasks/${id}`, {
+  update: (id: string, data: Partial<Task>) =>
+    fetchAPI<Task>(`/tasks/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
-    });
-  },
+    }),
   delete: (id: string) =>
     fetchAPI(`/tasks/${id}`, { method: 'DELETE' }),
-  getSubtasks: async (id: string): Promise<Task[]> => {
-    if (USE_MOCK) {
-      await delay(200);
-      const task = mockTasks.find(t => t.id === id);
-      return task?.subtasks || [];
-    }
-    return fetchAPI<Task[]>(`/tasks/${id}/subtasks`);
-  },
+  getSubtasks: (id: string) => fetchAPI<Task[]>(`/tasks/${id}/subtasks`),
   addSharedLink: (taskId: string, data: Partial<SharedLink>) =>
     fetchAPI<SharedLink>(`/tasks/${taskId}/shared-links`, {
       method: 'POST',
@@ -245,35 +165,15 @@ export const tasksAPI = {
     }),
 };
 
-// 打ち合わせ
 export const meetingsAPI = {
-  getAll: async (params?: { organizationId?: string; taskId?: string }): Promise<Meeting[]> => {
-    if (USE_MOCK) {
-      await delay(200);
-      let result = mockMeetings;
-      if (params?.organizationId) {
-        result = result.filter(m => m.organizationId === params.organizationId);
-      }
-      if (params?.taskId) {
-        result = result.filter(m => m.taskId === params.taskId);
-      }
-      return result;
-    }
+  getAll: (params?: { organizationId?: string; taskId?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.organizationId) searchParams.set('organizationId', params.organizationId);
     if (params?.taskId) searchParams.set('taskId', params.taskId);
     const query = searchParams.toString() ? `?${searchParams}` : '';
     return fetchAPI<Meeting[]>(`/meetings${query}`);
   },
-  getById: async (id: string): Promise<Meeting> => {
-    if (USE_MOCK) {
-      await delay(200);
-      const meeting = mockMeetings.find(m => m.id === id);
-      if (!meeting) throw new Error('Meeting not found');
-      return meeting;
-    }
-    return fetchAPI<Meeting>(`/meetings/${id}`);
-  },
+  getById: (id: string) => fetchAPI<Meeting>(`/meetings/${id}`),
   create: (data: Partial<Meeting>) =>
     fetchAPI<Meeting>('/meetings', {
       method: 'POST',
@@ -287,8 +187,3 @@ export const meetingsAPI = {
   delete: (id: string) =>
     fetchAPI(`/meetings/${id}`, { method: 'DELETE' }),
 };
-
-// ユーティリティ
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}

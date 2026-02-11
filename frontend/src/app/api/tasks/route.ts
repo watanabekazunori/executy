@@ -60,10 +60,20 @@ export async function POST(request: NextRequest) {
 
   try {
     const data = await request.json();
+
+    // フィールドホワイトリスト - 許可されたフィールドのみ使用
     const result = await db.insert(tasks).values({
-      ...data,
+      title: data.title,
+      description: data.description || undefined,
+      status: data.status || 'pending',
+      priority: data.priority || 'medium',
+      organizationId: data.organizationId,
+      projectId: data.projectId || undefined,
+      parentTaskId: data.parentTaskId || undefined,
+      estimatedMinutes: data.estimatedMinutes ? Number(data.estimatedMinutes) : undefined,
+      sortOrder: data.sortOrder ? Number(data.sortOrder) : 0,
       dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-      createdByEmail: session.user.email, // ユーザーのメールを保存
+      createdByEmail: session.user.email,
     }).returning();
     return NextResponse.json(result[0], { status: 201 });
   } catch (error) {

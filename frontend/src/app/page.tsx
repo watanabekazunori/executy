@@ -236,11 +236,12 @@ export default function Dashboard() {
     }
   }, [mounted])
 
-  // タイムエントリーをlocalStorageに保存
+  // タイムエントリーをlocalStorageに保存（最新100件のみ保持）
   useEffect(() => {
     if (mounted && timeEntries.length > 0) {
       try {
-        localStorage.setItem('aide-time-entries', JSON.stringify(timeEntries))
+        const entriesToSave = timeEntries.slice(-100)
+        localStorage.setItem('aide-time-entries', JSON.stringify(entriesToSave))
       } catch (e) { console.error(e) }
     }
   }, [timeEntries, mounted])
@@ -252,6 +253,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (status === 'authenticated') { loadData() }
   }, [status])
+
+  // タイマーのクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
 
   const loadData = async () => {
     setLoading(true)
@@ -284,7 +292,7 @@ export default function Dashboard() {
       // カレンダーイベントも自動ロード
       loadCalendarEvents()
       // 目標と通知は空で初期化（モックデータなし） - 削除済み
-    } catch (e) { console.error(e) }
+    } catch (e) { console.error(e); showToast('データの読み込みに失敗しました', 'error') }
     setLoading(false)
   }
 
@@ -335,12 +343,15 @@ export default function Dashboard() {
   }
 
   // スケジュールをタスクに適用
-  const applySchedule = (item: ScheduleItem) => {
-    setTasks(tasks.map(t =>
-      t.id === item.taskId
-        ? { ...t, dueDate: item.date }
-        : t
-    ))
+  const applySchedule = async (item: ScheduleItem) => {
+    try {
+      await updateTaskAPI(item.taskId, { dueDate: item.date })
+      setTasks(tasks.map(t =>
+        t.id === item.taskId
+          ? { ...t, dueDate: item.date }
+          : t
+      ))
+    } catch (e) { console.error(e) }
   }
 
   // AIダッシュボードアドバイスを取得（タスク内容に基づいた具体的なアドバイス）
@@ -1030,11 +1041,15 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                   ) : (() => {
                     const todayStr = new Date().toISOString().split('T')[0]
                     // Googleカレンダーイベント
-                    const googleEvents = calendarEvents
+                    type ScheduleEvent = {
+                      id: string; title: string; startTime: string; endTime: string; allDay: boolean;
+                      type: 'google' | 'ai'; location?: string; htmlLink?: string; reason?: string; taskId?: string
+                    }
+                    const googleEvents: ScheduleEvent[] = calendarEvents
                       .filter(e => e.startTime.startsWith(todayStr))
                       .map(e => ({ ...e, type: 'google' as const }))
                     // AIスケジュール（今日分）
-                    const aiEvents = (aiSchedule?.schedule || [])
+                    const aiEvents: ScheduleEvent[] = (aiSchedule?.schedule || [])
                       .filter(s => s.date === todayStr)
                       .map(s => ({
                         id: `ai-${s.taskId}`,
@@ -1090,22 +1105,22 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                                 <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 text-xs rounded flex-shrink-0">AI</span>
                               )}
                             </div>
-                            {event.type === 'google' && (event as any).location && (
-                              <p className="text-xs text-slate-500 mt-0.5 truncate">{(event as any).location}</p>
+                            {event.type === 'google' && event.location && (
+                              <p className="text-xs text-slate-500 mt-0.5 truncate">{event.location}</p>
                             )}
-                            {event.type === 'ai' && (event as any).reason && (
-                              <p className="text-xs text-purple-500 mt-0.5 truncate">{(event as any).reason}</p>
+                            {event.type === 'ai' && event.reason && (
+                              <p className="text-xs text-purple-500 mt-0.5 truncate">{event.reason}</p>
                             )}
                           </div>
-                          {event.type === 'google' && (event as any).htmlLink && (
-                            <a href={(event as any).htmlLink} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-600 flex-shrink-0">
+                          {event.type === 'google' && event.htmlLink && (
+                            <a href={event.htmlLink} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-600 flex-shrink-0">
                               <ExternalLink className="w-4 h-4" />
                             </a>
                           )}
                           {event.type === 'ai' && (
                             <button
                               onClick={() => {
-                                const task = tasks.find(t => t.id === (event as any).taskId)
+                                const task = tasks.find(t => t.id === event.taskId)
                                 if (task) openTaskDetail(task)
                               }}
                               className="text-slate-400 hover:text-purple-600 flex-shrink-0">
@@ -1205,8 +1220,12 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                             onClick={(e) => {
                               e.stopPropagation()
                               const taskId = task.id
-                              showConfirm('このタスクを削除しますか？', () => {
-                                setTasks(prev => prev.filter(t => t.id !== taskId))
+                              showConfirm('このタスクを削除しますか？', async () => {
+                                try {
+                                  await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
+                                  setTasks(prev => prev.filter(t => t.id !== taskId))
+                                  showToast('タスクを削除しました')
+                                } catch (e) { console.error(e); showToast('削除に失敗しました', 'error') }
                               })
                             }}
                             className="p-1 text-red-500 hover:bg-red-50 rounded">
@@ -1606,9 +1625,10 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                 <div className="bg-white rounded-xl border border-slate-200 p-5">
                   <div className="flex items-center gap-3 mb-3 min-w-0">
                     <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0"><Target className="w-5 h-5 text-purple-600" /></div>
-                    <span className="text-sm text-slate-600 truncate">完了率</span>
+                    <span className="text-sm text-slate-600 truncate">進行中</span>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800">{tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%</p>
+                  <p className="text-3xl font-bold text-slate-800">{inProgressCount}</p>
+                  <p className="text-xs text-slate-500 mt-1 truncate">{inProgressCount} タスク進行中</p>
                 </div>
                 <div className="bg-white rounded-xl border border-slate-200 p-5">
                   <div className="flex items-center gap-3 mb-3 min-w-0">
@@ -1767,8 +1787,12 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                               <button
                                 onClick={() => {
                                   const orgId = org.id
-                                  showConfirm(`「${org.name}」を削除しますか？`, () => {
-                                    setOrganizations(prev => prev.filter(o => o.id !== orgId))
+                                  showConfirm(`「${org.name}」を削除しますか？`, async () => {
+                                    try {
+                                      await fetch(`/api/organizations/${orgId}`, { method: 'DELETE' })
+                                      setOrganizations(prev => prev.filter(o => o.id !== orgId))
+                                      showToast('組織を削除しました')
+                                    } catch (e) { console.error(e); showToast('削除に失敗しました', 'error') }
                                   })
                                 }}
                                 className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
@@ -1848,8 +1872,12 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                                 <button
                                   onClick={() => {
                                     const projId = project.id
-                                    showConfirm(`「${project.name}」を削除しますか？`, () => {
-                                      setProjects(prev => prev.filter(p => p.id !== projId))
+                                    showConfirm(`「${project.name}」を削除しますか？`, async () => {
+                                      try {
+                                        await fetch(`/api/projects/${projId}`, { method: 'DELETE' })
+                                        setProjects(prev => prev.filter(p => p.id !== projId))
+                                        showToast('プロジェクトを削除しました')
+                                      } catch (e) { console.error(e); showToast('削除に失敗しました', 'error') }
                                     })
                                   }}
                                   className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
@@ -1988,10 +2016,13 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                   <button onClick={() => setEditingTask(true)} className="px-2 sm:px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs sm:text-sm"><Edit3 className="w-4 h-4 inline mr-1" />編集</button>
                 )}
                 {selectedTask.status !== 'completed' && (
-                  <button onClick={() => {
-                    const updated = { ...selectedTask, status: 'completed' }
-                    setTasks(tasks.map(t => t.id === selectedTask.id ? updated : t))
-                    setTaskDetailOpen(false)
+                  <button onClick={async () => {
+                    try {
+                      const updated = await updateTaskAPI(selectedTask.id, { status: 'completed' })
+                      setTasks(tasks.map(t => t.id === selectedTask.id ? updated : t))
+                      setTaskDetailOpen(false)
+                      showToast('タスクを完了にしました')
+                    } catch (e) { console.error(e); showToast('更新に失敗しました', 'error') }
                   }} className="px-2 sm:px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs sm:text-sm"><CheckCircle2 className="w-4 h-4 inline mr-1" /><span className="hidden sm:inline">完了</span></button>
                 )}
                 <button onClick={() => setTaskDetailOpen(false)} className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
@@ -2380,10 +2411,14 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
                 <button
                   onClick={() => {
                     const projId = selectedProject.id
-                    showConfirm(`「${selectedProject.name}」を削除しますか？関連するタスクも削除されます。`, () => {
-                      setProjects(prev => prev.filter(p => p.id !== projId))
-                      setTasks(prev => prev.filter(t => t.projectId !== projId))
-                      setProjectDetailOpen(false)
+                    showConfirm(`「${selectedProject.name}」を削除しますか？関連するタスクも削除されます。`, async () => {
+                      try {
+                        await fetch(`/api/projects/${projId}`, { method: 'DELETE' })
+                        setProjects(prev => prev.filter(p => p.id !== projId))
+                        setTasks(prev => prev.filter(t => t.projectId !== projId))
+                        setProjectDetailOpen(false)
+                        showToast('プロジェクトを削除しました')
+                      } catch (e) { console.error(e); showToast('削除に失敗しました', 'error') }
                     })
                   }}
                   className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50">
@@ -2438,7 +2473,43 @@ ${taskDetails.map(t => `- ${t.title} (優先度:${t.priority}, 期限:${t.dueDat
         </div>
       )}
 
-      {/* 新規目標モーダル */}
+      {/* AI分析結果モーダル */}
+      {aiAnalysisOpen && analyzingTask && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setAiAnalysisOpen(false); setAiAnalysisResult(null); setAnalyzingTask(null) }}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-500" />
+                <h2 className="font-semibold text-slate-800">AI分析結果</h2>
+              </div>
+              <button onClick={() => { setAiAnalysisOpen(false); setAiAnalysisResult(null); setAnalyzingTask(null) }} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {aiAnalyzing ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-purple-500 mb-3" />
+                  <p className="text-slate-600">タスクを分析中...</p>
+                </div>
+              ) : aiAnalysisResult ? (
+                <div className="space-y-4">
+                  {/* 見積もり時間 */}
+                  <div className="p-4 bg-blue-50 rounded-xl">
+                    <p className="text-sm text-blue-600 mb-1">予測所要時間</p>
+                    <p className="text-2xl font-bold text-blue-800">{aiAnalysisResult.estimatedMinutes}分</p>
+                  </div>
+
+                  {/* サブタスク候補 */}
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 mb-2">提案サブタスク</p>
+                    <div className="space-y-2">
+                      {aiAnalysisResult.subtasks.map((st, i) => (
+                        <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
+                          <span className="text-sm text-slate-700">{st.title}</span>
+                          {st.canAutomate && <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 text-xs rounded">AI実行可能</span>}
+                        </div>
+                      ))}
                     </div>
                   </div>
 

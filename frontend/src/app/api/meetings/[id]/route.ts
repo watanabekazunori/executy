@@ -43,7 +43,15 @@ export async function PATCH(
 
   try {
     const data = await request.json();
-    const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
+
+    // フィールドホワイトリスト
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    const allowedFields = ['title', 'description', 'organizationId', 'taskId', 'location', 'meetingUrl', 'status'] as const;
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        updateData[field] = data[field];
+      }
+    }
     if (data.startTime) updateData.startTime = new Date(data.startTime);
     if (data.endTime) updateData.endTime = new Date(data.endTime);
 

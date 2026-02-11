@@ -33,8 +33,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const data = await request.json();
+
+    // フィールドホワイトリスト
     const result = await db.insert(organizations).values({
-      ...data,
+      name: data.name,
+      initial: data.initial || (data.name ? data.name.charAt(0).toUpperCase() : ''),
+      color: data.color || 'bg-blue-500',
       ownerEmail: session.user.email,
     }).returning();
     return NextResponse.json(result[0], { status: 201 });

@@ -163,7 +163,7 @@ export default function IntegrationsPanel() {
                 type="password"
                 placeholder="AIzaSy..."
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500"
-                defaultValue={process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''}
+                defaultValue=""
               />
             </div>
             <div>

@@ -42,8 +42,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const data = await request.json();
+
+    // フィールドホワイトリスト
     const result = await db.insert(projects).values({
-      ...data,
+      name: data.name,
+      description: data.description || undefined,
+      organizationId: data.organizationId,
+      color: data.color || undefined,
+      status: data.status || 'active',
       ownerEmail: session.user.email,
     }).returning();
     return NextResponse.json(result[0], { status: 201 });

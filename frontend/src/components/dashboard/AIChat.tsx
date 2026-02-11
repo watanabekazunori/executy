@@ -13,15 +13,6 @@ import {
   Mail,
   MessageSquare,
 } from 'lucide-react';
-import {
-  chatWithAI,
-  breakdownTaskWithAI,
-  estimateTimeWithAI,
-  suggestPriorityWithAI,
-  summarizeMeetingWithAI,
-  generateEmailDraftWithAI,
-  summarizeSlackWithAI,
-} from '@/lib/gemini';
 
 interface Message {
   id: string;
@@ -101,8 +92,16 @@ export default function AIChat() {
     setIsLoading(true);
 
     try {
-      // Gemini APIを使用
-      const response = await chatWithAI(message);
+      // サーバーサイドAPI経由でAI応答を取得
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+      const data = await res.json();
+      const response = res.ok
+        ? { success: true, text: data.response }
+        : { success: false, text: '', error: data.error || 'API Error' };
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),

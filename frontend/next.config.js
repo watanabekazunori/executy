@@ -4,9 +4,6 @@ const nextConfig = {
   images: {
     domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],
   },
-  env: {
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'https://aide-blond.vercel.app',
-  },
 }
 
 module.exports = nextConfig

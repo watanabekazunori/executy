@@ -43,9 +43,19 @@ export async function PATCH(
 
   try {
     const data = await request.json();
+
+    // フィールドホワイトリスト
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    const allowedFields = ['name', 'initial', 'color'] as const;
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        updateData[field] = data[field];
+      }
+    }
+
     const result = await db
       .update(organizations)
-      .set({ ...data, updatedAt: new Date() })
+      .set(updateData)
       .where(and(eq(organizations.id, params.id), eq(organizations.ownerEmail, session.user.email)))
       .returning();
 

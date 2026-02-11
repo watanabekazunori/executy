@@ -45,10 +45,18 @@ export async function PATCH(
   try {
     const data = await request.json();
 
-    const updateData: any = {
-      ...data,
+    // フィールドホワイトリスト - 許可されたフィールドのみ使用
+    const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
     };
+
+    // 許可されたフィールドのみコピー
+    const allowedFields = ['title', 'description', 'status', 'priority', 'organizationId', 'projectId', 'estimatedMinutes', 'actualMinutes', 'sortOrder', 'progress', 'blockers', 'nextActions', 'slackLink', 'docLinks', 'driveLinks'] as const;
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        updateData[field] = data[field];
+      }
+    }
 
     // 日付フィールドの変換
     if (data.dueDate) {
