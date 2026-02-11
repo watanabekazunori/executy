@@ -26,6 +26,7 @@ import NewTaskModal from '@/components/modals/NewTaskModal'
 import NewProjectModal from '@/components/modals/NewProjectModal'
 import AIAnalysisModal from '@/components/modals/AIAnalysisModal'
 import ScheduleModal from '@/components/modals/ScheduleModal'
+import TaskPlanningModal from '@/components/modals/TaskPlanningModal'
 
 const menuItems = [
   { id: 'ai', name: 'AI アシスタント', icon: Sparkles },
@@ -68,6 +69,10 @@ function DashboardContent() {
   } | null>(null)
   const [analyzingTask, setAnalyzingTask] = useState<Task | null>(null)
   const [aiAnalyzing, setAiAnalyzing] = useState(false)
+
+  // 計画表
+  const [planningModalOpen, setPlanningModalOpen] = useState(false)
+  const [planningTask, setPlanningTask] = useState<Task | null>(null)
 
   // スケジュール
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false)
@@ -293,7 +298,7 @@ function DashboardContent() {
       )}
 
       {/* モーダル群 */}
-      <TaskDetailModal open={taskDetailOpen} onClose={() => setTaskDetailOpen(false)} task={selectedTask} />
+      <TaskDetailModal open={taskDetailOpen} onClose={() => setTaskDetailOpen(false)} task={selectedTask} onOpenPlanning={(t) => { setPlanningTask(t); setPlanningModalOpen(true) }} />
       <NewTaskModal open={newTaskOpen} onClose={() => setNewTaskOpen(false)} onTaskCreated={handleTaskCreated} />
       <NewProjectModal open={newProjectOpen} onClose={() => setNewProjectOpen(false)} organizations={organizations} onProjectCreated={() => loadData()} />
       <AIAnalysisModal
@@ -305,6 +310,10 @@ function DashboardContent() {
         open={scheduleModalOpen} onClose={() => setScheduleModalOpen(false)}
         loading={schedulingLoading} schedule={aiSchedule}
         onApplySchedule={applySchedule} onApplyAll={() => { aiSchedule?.schedule.forEach(s => applySchedule(s)); setScheduleModalOpen(false) }}
+      />
+      <TaskPlanningModal
+        open={planningModalOpen} onClose={() => { setPlanningModalOpen(false); setPlanningTask(null) }}
+        task={planningTask}
       />
 
       {/* トースト通知 */}

@@ -13,6 +13,7 @@ import {
   Sparkles,
   Loader2,
   Link as LinkIcon,
+  Target,
 } from 'lucide-react'
 import { useDashboard } from '@/contexts/DashboardContext'
 
@@ -47,9 +48,10 @@ interface TaskDetailModalProps {
   open: boolean
   onClose: () => void
   task: Task | null
+  onOpenPlanning?: (task: Task) => void
 }
 
-export default function TaskDetailModal({ open, onClose, task }: TaskDetailModalProps) {
+export default function TaskDetailModal({ open, onClose, task, onOpenPlanning }: TaskDetailModalProps) {
   const {
     updateTaskAPI,
     projects,
@@ -205,6 +207,15 @@ export default function TaskDetailModal({ open, onClose, task }: TaskDetailModal
               >
                 <Edit3 className="w-4 h-4 inline mr-1" />
                 編集
+              </button>
+            )}
+            {onOpenPlanning && (
+              <button
+                onClick={() => onOpenPlanning(task)}
+                className="px-2 sm:px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-xs sm:text-sm hover:bg-purple-200"
+              >
+                <Target className="w-4 h-4 inline mr-1" />
+                <span className="hidden sm:inline">計画</span>
               </button>
             )}
             {task.status !== 'completed' && (
